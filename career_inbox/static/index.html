@@ -1,0 +1,32 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Intern Inbox</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="/leaflet/leaflet.css">
+<link rel="stylesheet" href="/app.css"></head>
+<body>
+<header>
+  <h1>Intern Inbox</h1>
+  <nav class="pagetabs"><button id="pageInbox" class="on">Inbox</button><button id="pageAts">ATS boards</button></nav>
+  <div id="counts" class="sub">…</div>
+  <span class="grow"></span>
+  <div class="seg" id="viewSeg"><button id="viewTable" class="on">Table</button><button id="viewMap">Map</button></div>
+  <input id="search" type="search" placeholder="Search company, role, notes…">
+  <button id="checkNow" class="deck">Check now</button><button id="csv" class="deck">CSV</button>
+  <button id="emailSaved" class="deck">Email ♥</button>
+</header>
+<div id="pagebar" class="sub" hidden>ATS boards — internships only, pulled daily from the Ashby + Greenhouse APIs of companies already in the pipeline. Listings with no intern signal in title, JD, or type are removed at the source.</div>
+<div id="filters">
+  <select id="fStatus"></select><select id="fPri"></select><select id="fFam"></select>
+  <select id="fStage"></select><select id="fMode"></select><select id="fSrc"></select>
+  <span id="shown" class="sub"></span>
+</div>
+<div id="mapstrip" hidden><div id="map">No mapped offices yet.</div><button id="mapToggle">Hide map ▴</button></div>
+<div id="bulkbar" hidden><span id="bulkCount"></span>
+  <button id="bulkShortlist" class="deck">Shortlist</button><button id="bulkKill" class="deck">Kill</button>
+  <button id="bulkClear" class="deck">Clear</button></div>
+<main><table id="grid"><thead></thead><tbody></tbody></table>
+  <div id="empty" hidden></div></main>
+<aside id="detail" hidden></aside>
+<div id="toast" class="toast" hidden></div>
+<script src="/leaflet/leaflet.js"></script><script src="/app.js"></script>
+</body></html>
