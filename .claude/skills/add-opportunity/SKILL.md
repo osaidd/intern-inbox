@@ -14,29 +14,39 @@ with JD → run_log. Record start time first.
    location, posted_date if visible, jd_text (verbatim, ≤20,000 chars). A bare URL →
    WebFetch it first to get the JD. Never WebFetch a linkedin.com URL: ask the user to
    paste the JD text instead.
-2. **Gate check — warn and ask BEFORE writing anything.** An explicit paste is intent, so
-   these warn rather than block. Ask ONCE per batch, in one combined prompt listing every
-   affected row; on "no", skip those rows and show them in the reply table as `skipped`:
-   - **Not an internship** (`career_hunt.score.is_internship(role, jd_text)` is False):
-     this pipeline is internships only — say so plainly before storing anything full-time.
-   - **Exclude-keyword title** ("title matches exclude keyword 'senior'").
-   - **Hard company gate** — `priority(...)` below returns `'dead'` (mega-corp / ≥100
-     people / post-Series-B): store as `priority='low'` on yes.
-3. **Dedupe + write** (one `uv run python` heredoc per batch):
+2. **Gate check — warn and ask BEFORE writing anything.** One `uv run python` heredoc per
+   batch does the gate check and then the step-3 write; imports:
    ```python
    import db
    from career_hunt import config as ch_config
    from career_hunt.models import Job, dedupe_hash
-   from career_hunt.score import detect_work_mode, is_internship, priority
+   from career_hunt.score import (detect_work_mode, is_internship,
+                                  passes_company_gates, priority)
    from career_hunt.store import get_or_create_company
    from feeds.jobspy_pull import load_config, score_job
+   ch = ch_config.load(); cfg = load_config()
    ```
-   `h = dedupe_hash(company, role, url)`, then:
+   Evaluate each parsed posting against the same gates `career_hunt.store.insert_job`
+   would have applied. An explicit paste is intent, so these warn rather than block. Ask
+   ONCE per batch, in one combined prompt listing every affected row; on "no", skip those
+   rows and show them in the reply table as `skipped`:
+   - **Not an internship** — `ch.interns_only and not is_internship(role, jd_text)`: this
+     pipeline is internships only — say so plainly before storing anything full-time.
+   - **Exclude-keyword title** — any `ch.exclude_keywords` entry in the lowercased title
+     ("title matches exclude keyword 'senior'").
+   - **Blocked company or size red flag** — `not passes_company_gates(company, jd_text, ch)`:
+     the mega-corp blocklist plus the JD size red flags. This is the check that catches a
+     mega-corp paste — `priority()` cannot, because a brand-new company row has NULL
+     stage/headcount, so `company_tier` returns `'unknown'` and never `'dead'`.
+   - **Known company that fails the stage/size gate** — the company is already enriched and
+     `priority(...)` in step 3 returns `'dead'` (≥100 people / post-Series-B): store as
+     `priority='low'` on yes.
+3. **Dedupe + write** (same heredoc): `h = dedupe_hash(company, role, url)`, then:
    - new → link the company and stamp priority alongside the insert (a paste bypasses the
      ingest gates — see Rules — but still gets the company link and a priority so it ranks
      in the app):
      ```python
-     ch = ch_config.load(); cfg = load_config(); conn = db.connect()
+     conn = db.connect()
      cid = get_or_create_company(conn, company)
      comp = dict(conn.execute("SELECT stage, headcount FROM companies WHERE id=?", (cid,)).fetchone())
      pri = priority(Job(company=company, role=role, url=url, location=location, jd_text=jd_text), comp, ch)

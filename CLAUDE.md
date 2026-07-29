@@ -1,6 +1,8 @@
 # intern-inbox — conventions
 
-NYC/NJ **internships only** — both gates are hard-coded in `career_hunt/score.py`.
+NYC/NJ **internships only** — the NYC/NJ metro gate is hard-coded in
+`career_hunt/score.py`; internships-only is enforced in the same module's `matches()`
+behind the `[hunt].interns_only` config flag (default true).
 ALL DB access via `db.py` (`uv run python -c "import db; db.migrate()"` applies migrations).
 Every skill/feed run writes ONE `run_log` row via `db.log_run()` — non-optional.
 Secrets only in `config/.env` (gitignored). Personal config is gitignored; tracked
@@ -21,6 +23,6 @@ Python via `uv` only. Tests: `uv run pytest`.
 | pipeline-review | opportunities.status (+applied_date), run_log |
 | skills-gap | vault/outputs/career/, profile/ (user-approved edits only), run_log |
 | setup | config/career.toml, config/sources.local.toml, config/.env, profile/profile.md (all gitignored), run_log |
-| career_inbox (FastAPI :8477) | opportunities.status/notes via career_inbox/actions.py ONLY; companies.lat/lon (geocode cache); run_log |
+| career_inbox (FastAPI :8477) | opportunities.status/applied_date/notes via career_inbox/actions.py ONLY; companies.lat/lon (geocode cache); run_log; + /api/add → opportunities/companies via career_hunt.store (source=browser, no run_log — caller logs) |
 
 (Extend this table with every new writer. Nothing else writes to db/vault.)
