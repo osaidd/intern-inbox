@@ -1,0 +1,12 @@
+# personal layer — created by /setup, never committed
+config/career.toml
+config/sources.local.toml
+config/.env
+profile/
+data/
+vault/
+# python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
