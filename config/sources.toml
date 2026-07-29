@@ -1,0 +1,64 @@
+# COMMUNAL — tracked. Found a new Ashby/Greenhouse board? PR the slug here so the whole cohort gains it. Personal additions go in config/sources.local.toml (gitignored), which merges over this file.
+
+[jobspy]
+sites = ["indeed", "google"]   # LinkedIn deliberately excluded (PRD §4.3 / §11.5)
+location = "New York, NY"
+country_indeed = "USA"
+results_per_query = 25
+# AI-applied tilt: AI engineering / PM / GTM roles — not pure data analysis.
+role_queries = [
+  "ai engineer intern startup",
+  "software engineering intern ai startup",
+  "ai product manager intern",
+  "gtm engineering intern",
+  "ai operations intern",
+  "founders associate intern ai",
+  # broadened — same AI-applied tilt, wider nets
+  "machine learning intern startup",
+  "llm intern",
+  "ai intern fintech",
+  "product intern ai startup",
+  "growth intern ai startup",
+  "forward deployed engineer intern",
+]
+
+[ats]
+# Org slugs for feeds/ats_pull.py — Ashby + Greenhouse posting APIs (free, keyless
+# JSON, full JD text at ingest). Seeded by probing both APIs for companies with live
+# pipeline rows. Add a slug here whenever a scan finds a company hosting its board on
+# either ATS.
+ashby_orgs = [
+  "achilleshr", "adaptivesecurity", "agentio", "allium", "arlo", "ataraxis-ai",
+  "auctor", "augustus", "brellium", "candidhealth", "codes-health", "cognition",
+  "confido", "crosby", "egra", "fundwell", "geniusai", "glimpse", "glossgenius",
+  "gptzero", "january", "kirin", "maybern", "mednet", "melotech", "mirage",
+  "moab", "modal", "neon", "newform", "niural", "omnea", "permitflow",
+  "quadrillion-labs", "ramp", "rho", "siro", "solva", "standardbots", "sweep",
+  "tabs", "teleskope", "tenex", "tennr", "tessera-labs", "vendelux",
+]
+greenhouse_orgs = [
+  "axial", "courierhealth", "current", "davidzwirnergallery", "ethic",
+  "eulerity", "excelsportsmanagement", "flex", "goldenhippo", "gusto", "orenda",
+  "phamily", "prophet", "recidiviz", "safariai", "thetradedesk", "vestwell",
+  "zocdoc", "zscaler",
+]
+
+[websearch]
+templates = [
+  "{company} careers internship New York",
+  "NYC AI startup hiring intern engineering product {month} {year}",
+]
+
+[[firecrawl_targets]]
+name = "yc_waas"
+url = "https://www.workatastartup.com/companies?locations=New+York"
+
+[[firecrawl_targets]]
+name = "wellfound_ny_swe"
+url = "https://wellfound.com/role/l/software-engineer/new-york"
+
+[[firecrawl_targets]]
+name = "builtin_nyc"
+# Built In NYC shows company size on postings — the scan's enrichment pass
+# captures stage/headcount hints from here into the companies table.
+url = "https://www.builtinnyc.com/jobs/internships"
