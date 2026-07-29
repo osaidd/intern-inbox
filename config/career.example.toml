@@ -61,3 +61,19 @@ to = ""
 smtp_host = "smtp.gmail.com"
 smtp_port = 587
 smtp_user = ""
+
+[scoring]
+# Inputs to the 0..1 profile-fit score only (feeds/jobspy_pull.score_job, reused by
+# feeds/jd_hydrate). NOT a gate: every hard include/exclude decision is made from
+# [role] above via career_hunt.score. KEEP IN SYNC with [role] — these three lists
+# are deliberate copies, so edit both.
+profile_keywords = ["ai", "llm", "rag", "genai", "generative", "agent", "prompt", "product", "gtm", "finance", "fintech", "operations", "data"]
+exclude_keywords = ["senior", "staff", "director", "phd", "clearance"]
+# Wishlist boost: title substring match -> score x1.25 capped at 1.0.
+target_titles = ["ai engineer", "ai engineering intern", "software engineering intern", "engineering intern", "product manager intern", "product management intern", "gtm engineering", "ai business operations", "ai operations intern", "founders associate"]
+
+[scoring.weights]
+keyword_match = 0.4
+stage_fit = 0.2
+intern_signal = 0.3
+recency = 0.1
