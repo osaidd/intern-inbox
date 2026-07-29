@@ -1,0 +1,18 @@
+[
+  {"company_name": "Solva", "title": "AI Engineering Intern",
+   "locations": ["New York, NY"], "url": "https://jobs.example.com/solva/1",
+   "active": true, "is_visible": true, "date_posted": 1751500000,
+   "terms": ["Summer 2027"], "sponsorship": "Other"},
+  {"company_name": "MegaCloud", "title": "Software Engineering Intern",
+   "locations": ["Seattle, WA"], "url": "https://jobs.example.com/mc/2",
+   "active": true, "is_visible": true, "date_posted": 1751500000},
+  {"company_name": "Tessera", "title": "Machine Learning Intern",
+   "locations": ["Remote in USA"], "url": "https://jobs.example.com/t/3",
+   "active": true, "is_visible": true, "date_posted": 1751500000},
+  {"company_name": "OldCo", "title": "Data Intern",
+   "locations": ["New York, NY"], "url": "https://jobs.example.com/o/4",
+   "active": false, "is_visible": true, "date_posted": 1720000000},
+  {"company_name": "Auctor", "title": "Warehouse Associate Intern",
+   "locations": ["Brooklyn, NY"], "url": "https://jobs.example.com/a/5",
+   "active": true, "is_visible": true, "date_posted": 1751500000}
+]

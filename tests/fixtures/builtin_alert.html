@@ -1,0 +1,42 @@
+<!-- tests/fixtures/builtin_alert.html
+     Synthesized from a real Built In "New AI Job Matches" alert (support@builtin.com).
+     Every job anchor is an awstrack.me redirect with the real builtin.com URL
+     percent-encoded after /L0/; anchor text concatenates company, role, mode,
+     location and (sometimes) a salary range. -->
+<html><body>
+<table><tr><td>
+  <p>New AI Job Matches</p>
+
+  <!-- card 1: role slug found in anchor text; salary present -->
+  <table><tr><td>
+    <a href="https://cb4sdw3d.r.us-west-2.awstrack.me/L0/https:%2F%2Fbuiltin.com%2Fjob%2Fai-engineer%2F10408735%3Fi=abc123%26utm_medium=email/1/01000198aa0f1c2d-3f4e5d6c-0000-0000-0000-11223344/deadbeef=">
+      <span>PwC</span><span>AI Engineer</span><span>Hybrid</span>
+      <span>Multiple Locations</span><span>$50,500-$112,500</span></a>
+  </td></tr></table>
+
+  <!-- card 2: multi-word company with an Inc suffix, remote, no salary -->
+  <table><tr><td>
+    <a href="https://cb4sdw3d.r.us-west-2.awstrack.me/L0/https:%2F%2Fbuiltin.com%2Fjob%2Fai-software-engineer%2F10412001%3Fi=xyz789/1/01000198aa0f1c2d-3f4e5d6c-0000-0000-0000-55667788/cafebabe=">
+      <span>Gaya Technologies Inc</span><span>AI Software Engineer</span>
+      <span>Remote</span><span>United States</span></a>
+  </td></tr></table>
+
+  <!-- card 3: NYC in-office intern card -->
+  <table><tr><td>
+    <a href="https://cb4sdw3d.r.us-west-2.awstrack.me/L0/https:%2F%2Fbuiltin.com%2Fjob%2Fai-engineer-intern%2F10399412%3Fi=q1w2e3/1/01000198aa0f1c2d-3f4e5d6c-0000-0000-0000-99aabbcc/f00dface=">
+      <span>Solva</span><span>AI Engineer Intern</span><span>In Office</span>
+      <span>New York, NY</span></a>
+  </td></tr></table>
+
+  <!-- card 4: same job, second "Apply" anchor — must collapse into card 1 -->
+  <table><tr><td>
+    <a href="https://cb4sdw3d.r.us-west-2.awstrack.me/L0/https:%2F%2Fbuiltin.com%2Fjob%2Fai-engineer%2F10408735%3Fi=abc123%26cta=apply/1/01000198aa0f1c2d-3f4e5d6c-0000-0000-0000-11223399/beadfeed=">
+      <span>Apply Now</span></a>
+  </td></tr></table>
+
+  <!-- chrome: not a /job/ URL — dropped -->
+  <a href="https://cb4sdw3d.r.us-west-2.awstrack.me/L0/https:%2F%2Fbuiltin.com%2Fjobs%3Fsearch=ai/1/01000198aa0f1c2d-3f4e5d6c-0000-0000-0000-ddeeff00/0badcafe=">
+    See all AI jobs</a>
+  <a href="https://builtin.com/unsubscribe?u=123">Unsubscribe</a>
+</td></tr></table>
+</body></html>

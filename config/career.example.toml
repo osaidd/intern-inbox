@@ -1,0 +1,63 @@
+# intern-inbox scoring config. /setup copies this to config/career.toml and
+# personalizes it. Hard gates (internships-only, NYC/NJ metro) live in code, not here.
+
+[hunt]
+city = "nyc"
+allow_remote = false
+# The WHOLE pipeline is internships — every feed's ingest gate requires an explicit
+# intern signal (title/JD-assertion/type; see score.is_internship).
+interns_only = true
+
+[company]
+# Rule: seed–Series A ≤100 people = prime; Series B only if ≤75 (lower fit);
+# confirmed ≥100 people or later than Series B = auto-dead.
+tier1_stages = ["pre-seed", "seed", "series a"]
+tier1_max_headcount = 100
+tier2_stages = ["series b"]
+tier2_max_headcount = 75
+hard_cap_headcount = 100
+
+[location]
+# tier1 = NYC proper (full priority); tier2 = NJ commute belt (kept, lower priority)
+tier1 = ["manhattan", "new york", "nyc", "brooklyn", "queens", "bronx",
+         "staten island", "long island city"]
+tier2 = ["jersey city", "hoboken", "newark", "weehawken", "secaucus"]
+
+[role]
+# Starter lists — /setup rewrites these from YOUR resume and preferences.
+profile_keywords = ["ai", "llm", "rag", "genai", "generative", "agent", "prompt", "product", "gtm", "finance", "fintech", "operations", "data"]
+exclude_keywords = ["senior", "staff", "director", "phd", "clearance"]
+# Case-insensitive SUBSTRING match on company name — keep every entry long enough to
+# be unambiguous (no short tokens like "SIG"/"IMC" that hide inside other names).
+exclude_companies = ["Amazon", "Google", "Meta", "Microsoft", "JPMorgan", "Goldman Sachs", "Deloitte", "KPMG", "EY", "PwC", "Accenture", "IBM", "Bloomberg", "Citadel", "Two Sigma", "Palantir", "Jane Street", "Stripe", "Databricks", "Snowflake", "Datadog", "Uber", "Lyft", "Airbnb", "Netflix", "Apple", "Nvidia", "Oracle", "Salesforce", "Adobe", "TikTok", "ByteDance", "Spotify", "Capital One", "Morgan Stanley", "Bank of America", "Wells Fargo", "BlackRock", "Point72", "D. E. Shaw", "Hudson River Trading", "Jump Trading", "Optiver", "Susquehanna", "OpenAI", "Anthropic", "Scale AI", "Coinbase", "Robinhood", "SiriusXM", "Genpact"]
+size_red_flags = ["fortune 500", "10,000+ employees", "5,000+ employees", "global offices", "publicly traded"]
+target_titles = ["ai engineer", "ai engineering intern", "software engineering intern", "engineering intern", "product manager intern", "product management intern", "gtm engineering", "ai business operations", "ai operations intern", "founders associate"]
+
+[github_intern]
+# SimplifyJobs-format listings.json, pulled raw — no scraping.
+urls = [
+  "https://raw.githubusercontent.com/SimplifyJobs/Summer2026-Internships/dev/.github/scripts/listings.json",
+  "https://raw.githubusercontent.com/SimplifyJobs/Summer2027-Internships/dev/.github/scripts/listings.json",
+]
+
+[linkedin_mail]
+# verified live: LinkedIn alerts arrive from jobs-noreply@, not jobalerts-noreply@
+sender = "jobs-noreply@linkedin.com"
+lookback_days = 14
+
+[mail_sources]
+# Extra job-alert senders parsed by the mail feed in the SAME IMAP session as the
+# LinkedIn alerts above. Flip a flag to false to stop parsing that sender without
+# touching code.
+builtin_enabled = true
+builtin_sender = "support@builtin.com"
+wellfound_enabled = true
+wellfound_sender = "team@hi.wellfound.com"
+
+[email]
+# /setup fills these; password lives in config/.env (CAREER_SMTP_PASS / CAREER_IMAP_PASS)
+enabled = false
+to = ""
+smtp_host = "smtp.gmail.com"
+smtp_port = 587
+smtp_user = ""
