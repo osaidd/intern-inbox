@@ -1,4 +1,4 @@
--- migrations/008_career_inbox.sql
+-- migrations/004_career_inbox.sql
 -- Career-inbox (spec 2026-07-12): inline notes + re-sighting timestamp.
 ALTER TABLE opportunities ADD COLUMN notes TEXT;
 ALTER TABLE opportunities ADD COLUMN last_seen TEXT;

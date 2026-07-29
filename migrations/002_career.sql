@@ -1,5 +1,5 @@
 -- Locked DDL from Life OS Build Kickoff, plus jd_text (approved deviation 2026-07-03:
--- Osaid explicitly wants full job descriptions stored for tailoring).
+-- full job descriptions stored for tailoring).
 CREATE TABLE opportunities (
   id INTEGER PRIMARY KEY,
   source TEXT NOT NULL,

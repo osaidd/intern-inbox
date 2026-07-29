@@ -1,7 +1,7 @@
--- migrations/007_career_overhaul.sql
+-- migrations/003_career_overhaul.sql
 -- Career-hunt overhaul (spec 2026-07-08): companies enrichment table + wider
 -- opportunities (priority tiers, funnel statuses, office metadata).
--- No BEGIN/COMMIT here — lifedb.migrate() wraps the file in one transaction.
+-- No BEGIN/COMMIT here — db.migrate() wraps the file in one transaction.
 
 CREATE TABLE companies (
   id INTEGER PRIMARY KEY,
