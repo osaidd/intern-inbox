@@ -1,7 +1,7 @@
 # career_hunt/score.py
 """Deterministic career-hunt scorer. Pure functions of (job, company, config) — zero
-LLM, zero network. priority() is recomputed when enrichment lands (the one sanctioned
-deviation from apartment-hunt immutability, because company data arrives after ingest)."""
+LLM, zero network. Scores are otherwise fixed at ingest; priority() is the one value
+recomputed later, because company stage/headcount only arrives with enrichment."""
 import re
 
 from .config import Config

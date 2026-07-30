@@ -1,5 +1,5 @@
--- Locked DDL from Life OS Build Kickoff, plus jd_text (approved deviation 2026-07-03:
--- full job descriptions stored for tailoring).
+-- The opportunities table: one row per posting, including jd_text — full job
+-- descriptions are stored so applications can be tailored from them later.
 CREATE TABLE opportunities (
   id INTEGER PRIMARY KEY,
   source TEXT NOT NULL,

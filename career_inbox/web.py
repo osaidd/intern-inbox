@@ -204,7 +204,8 @@ def post_bulk(body: BulkBody):
 
 @app.post("/api/add")
 def add_jobs(payload: list[dict]):
-    """Ingestion door for the job-hunt browser skill (rental-inbox /api/add pattern)."""
+    """Ingestion door for external tooling: POST a list of postings and they land in
+    the pipeline through the same gates and dedupe as any feed."""
     cfg = ch_config.load()
     stats = {"new": 0, "dup": 0, "excluded": 0}
     conn = db.connect()
@@ -246,7 +247,7 @@ def email_saved():
         r.setdefault("source", "")
         r["priority"] = r["priority"] or "low"
     try:
-        send(cfg.email, f"Career inbox: {len(rows)} in play", render_digest(rows))
+        send(cfg.email, f"Intern Inbox: {len(rows)} in play", render_digest(rows))
     except EmailError as e:
         raise HTTPException(502, f"email failed: {e}")
     return {"sent": len(rows)}

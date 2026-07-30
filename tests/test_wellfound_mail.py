@@ -36,8 +36,8 @@ def test_details_without_salary():
 
 
 def test_urls_are_none():
-    """Wellfound links are opaque tracking hashes (StreetEasy precedent) — carrying
-    them would defeat dedupe, so identity is company+role only."""
+    """Wellfound links are opaque per-recipient tracking hashes — carrying them would
+    defeat dedupe (every re-send looks new), so identity is company+role only."""
     assert all(c["url"] is None for c in parse_alert_html(HTML))
 
 

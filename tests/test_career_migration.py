@@ -1,4 +1,4 @@
-"""Migration 007: companies table exists; opportunities keeps data and gains columns."""
+"""Migration 003: companies table exists; opportunities keeps data and gains columns."""
 import sqlite3
 import db
 
@@ -37,11 +37,11 @@ def test_opportunities_new_columns_and_statuses(tmp_path, monkeypatch):
 
 
 def test_existing_rows_survive_rebuild(tmp_path, monkeypatch):
-    """Simulate pre-007 data: apply migrations up to 006, insert, then apply 007."""
+    """003 rebuilds opportunities, so a full row must round-trip through the new schema.
+    Staging genuine pre-003 data (by pre-marking 003 as applied) is fragile, so this
+    applies every migration, inserts, and checks the row comes back intact."""
     monkeypatch.setattr(db, "DB_PATH", tmp_path / "life.db")
     monkeypatch.setattr(db, "MIGRATIONS_DIR", db.MIGRATIONS_DIR)  # real dir
-    # apply everything except 007 by pre-marking it done is fragile; instead apply all,
-    # insert, and verify round-trip integrity of a full row through the new schema.
     db.migrate()
     db.insert("opportunities", {"source": "jobspy", "company": "Solva", "role": "AI Intern",
                                     "url": "https://x.co/1", "score": 0.7, "dedupe_hash": "hx",
@@ -49,5 +49,5 @@ def test_existing_rows_survive_rebuild(tmp_path, monkeypatch):
     conn = db.connect()
     row = conn.execute("SELECT * FROM opportunities WHERE dedupe_hash='hx'").fetchone()
     assert row["company"] == "Solva" and row["status"] == "shortlisted"
-    assert row["priority"] is None  # backfilled later by scripts/backfill_career.py
+    assert row["priority"] is None  # raw db.insert() bypasses insert_job(), which sets it
     conn.close()

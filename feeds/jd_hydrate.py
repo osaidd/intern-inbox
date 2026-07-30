@@ -2,9 +2,9 @@
 have a url but no jd_text, extract readable text, then fill the legacy profile-fit
 score and recompute the row's priority (fuller text can upgrade role strength).
 
-Rules: NEVER fetches linkedin.com (browser skill is the only LinkedIn channel);
-polite sequential fetches (1.5s spacing, honest UA, 15s timeout); one attempt per
-URL per RETRY_DAYS (jd_fetched_at stamp, migration 009); cap per run.
+Rules: NEVER fetches linkedin.com (their job-alert emails are the only LinkedIn
+channel); polite sequential fetches (1.5s spacing, honest UA, 15s timeout); one
+attempt per URL per RETRY_DAYS (jd_fetched_at stamp, migration 005); cap per run.
 
 Run: uv run python -m feeds.jd_hydrate [--dry-run] [--cap N]
 Writes: opportunities (jd_text/score/priority/jd_fetched_at via this feed +

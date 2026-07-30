@@ -1,7 +1,8 @@
 # COMMUNAL — tracked. Found a new Ashby/Greenhouse board? PR the slug here so the whole cohort gains it. Personal additions go in config/sources.local.toml (gitignored), which merges over this file.
 
 [jobspy]
-sites = ["indeed", "google"]   # LinkedIn deliberately excluded (PRD §4.3 / §11.5)
+# LinkedIn deliberately excluded — their job-alert emails are the only LinkedIn channel.
+sites = ["indeed", "google"]
 location = "New York, NY"
 country_indeed = "USA"
 results_per_query = 25

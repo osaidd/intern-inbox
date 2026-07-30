@@ -1,5 +1,5 @@
-"""Digest email — apartment-hunt pattern: Gmail SMTP + app password, HTML table,
-sent only when a run lands ≥1 HIGH role. Failure never breaks the feed run."""
+"""Digest email: Gmail SMTP + app password, HTML table, sent only when a run lands
+≥1 HIGH role. Failure never breaks the feed run."""
 import html
 import os
 import smtplib
@@ -48,7 +48,7 @@ def maybe_send_digest(cfg: Config, new_rows: list, skill: str) -> bool:
     high = [r for r in new_rows if r["priority"] == "high"]
     if not high or not cfg.email.enabled or not os.environ.get("CAREER_SMTP_PASS"):
         return False
-    subject = f"Career hunt: {len(new_rows)} new ({len(high)} high) — {skill}"
+    subject = f"Intern Inbox: {len(new_rows)} new ({len(high)} high) — {skill}"
     try:
         send(cfg.email, subject, render_digest(new_rows))
         return True

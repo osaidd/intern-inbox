@@ -2,10 +2,9 @@
 (team@hi.wellfound.com). Verified against live alerts 2026-07-29.
 
 Every link in these emails is an opaque tracking hash — the href carries no job
-identity at all (the StreetEasy precedent from rental-inbox: a per-recipient
-redirect is worse than no url, because it makes every re-send look like a new
-row). So `url` is None and dedupe rides on company+role, and the parser reads the
-TEXT stream instead of the anchors.
+identity at all, and storing a per-recipient redirect is worse than storing no url,
+because it makes every re-send look like a new row. So `url` is None and dedupe
+rides on company+role, and the parser reads the TEXT stream instead of the anchors.
 
 The text stream is a repeating triple:
     'Startup Founders Coach'                                  <- title

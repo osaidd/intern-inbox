@@ -1,4 +1,4 @@
-/* career-inbox — UI core (Task 6). Ports the rental-inbox architecture:
+/* career-inbox — UI core.
    one state object S, a client-side applyFilters() pipeline, render()/renderHead(),
    URL-hash sync (readHash on load, syncHash on every change via replaceState),
    debounced search, sortable headers. Status filter refetches (statuses param);
@@ -48,7 +48,7 @@ const S = {
   shownIds: [],        // ids currently rendered (for select-all-shown)
 };
 
-/* career.jsx priority tokens — office pin fill by priority */
+/* priority tokens — office pin fill by priority */
 const OFFICE_COLORS = { high: "#7fc484", medium: "#d8a75c", low: "#8f8e8a" };
 const coKey = (name) => (name == null ? "" : String(name)).trim().toLowerCase();
 

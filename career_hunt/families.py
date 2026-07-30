@@ -1,5 +1,5 @@
-# Build 8: deterministic role-family classification by title keyword, first match
-# wins, checked in this order (target families; data analysis de-prioritized).
+# Deterministic role-family classification by title keyword, first match wins,
+# checked in this order (target families; data analysis de-prioritized).
 # Specific families (gtm, product, ai) outrank the broad "engineering intern" net,
 # else "GTM Engineering Intern" would read as software engineering.
 ROLE_FAMILIES = [
