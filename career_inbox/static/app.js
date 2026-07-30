@@ -499,16 +499,25 @@ function groupHeaderRow(k, members) {
   const td = document.createElement("td");
   td.colSpan = COLS.length;
   const folded = S.folded.has(k);
+  const r0 = members[0];
   const caret = document.createElement("span");
-  caret.className = "grp-caret"; caret.textContent = folded ? "▸ " : "▾ ";
+  caret.className = "grp-caret"; caret.textContent = folded ? "▸" : "▾";
+  const logo = logoEl(r0, 18);           // same favicon/monogram as the company cell
   const name = document.createElement("span");
-  name.className = "grp-name"; name.textContent = members[0].company;
+  name.className = "grp-name"; name.textContent = r0.company;
+  const bits = [];
+  if (r0.enrich_status === "ok" && (r0.stage || r0.headcount != null))
+    bits.push(`${r0.stage || "—"}${r0.headcount != null ? ` · ${r0.headcount}p` : ""}`);
+  bits.push(`${members.length} role${members.length === 1 ? "" : "s"}`);
   const fresh = members.filter(isFresh).length;
+  if (fresh) bits.push(`${fresh} today`);
   const sub = document.createElement("span");
   sub.className = "sub";
-  sub.textContent = `  ·  ${members.length} role${members.length === 1 ? "" : "s"}` +
-                    (fresh ? `  ·  ${fresh} today` : "");
-  td.append(caret, name, sub);
+  sub.textContent = ` · ${bits.join(" · ")}`;
+  const wrap = document.createElement("div");
+  wrap.className = "grp-wrap";
+  wrap.append(caret, logo, name, sub);
+  td.appendChild(wrap);
   tr.appendChild(td);
   tr.addEventListener("click", () => {
     if (S.folded.has(k)) S.folded.delete(k); else S.folded.add(k);

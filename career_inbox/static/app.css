@@ -208,8 +208,9 @@ td.age .stale-flag { color: var(--muted); font-size: 12px; }
 
 /* ---------- ATS grouped view ---------- */
 tr.grp td { background: var(--surface); border-top: 1px solid var(--line-strong);
-            padding: 9px 10px; cursor: pointer; }
-tr.grp .grp-caret { color: var(--muted); font-size: 11px; }
+            padding: 8px 10px; cursor: pointer; }
+tr.grp .grp-wrap { display: flex; align-items: center; gap: 8px; }
+tr.grp .grp-caret { color: var(--muted); font-size: 11px; width: 10px; }
 tr.grp .grp-name { color: var(--ink); font-weight: 600; }
 tr.grp:hover .grp-name { text-decoration: underline; }
 
