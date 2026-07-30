@@ -27,8 +27,10 @@ tier2 = ["jersey city", "hoboken", "newark", "weehawken", "secaucus"]
 # Starter lists — /setup rewrites these from YOUR resume and preferences.
 profile_keywords = ["ai", "llm", "rag", "genai", "generative", "agent", "prompt", "product", "gtm", "finance", "fintech", "operations", "data"]
 exclude_keywords = ["senior", "staff", "director", "phd", "clearance"]
-# Case-insensitive SUBSTRING match on company name — keep every entry long enough to
-# be unambiguous (no short tokens like "SIG"/"IMC" that hide inside other names).
+# Case-insensitive WHOLE-WORD match on company name: an entry has to line up with word
+# boundaries, so "EY" hides a company literally named EY (or "EY-Parthenon") but leaves
+# "Grey State Apparel" alone. Keep entries unambiguous anyway — a whole word that is also
+# an ordinary word ("Apple", "Meta") still hides every company using it in its name.
 exclude_companies = ["Amazon", "Google", "Meta", "Microsoft", "JPMorgan", "Goldman Sachs", "Deloitte", "KPMG", "EY", "PwC", "Accenture", "IBM", "Bloomberg", "Citadel", "Two Sigma", "Palantir", "Jane Street", "Stripe", "Databricks", "Snowflake", "Datadog", "Uber", "Lyft", "Airbnb", "Netflix", "Apple", "Nvidia", "Oracle", "Salesforce", "Adobe", "TikTok", "ByteDance", "Spotify", "Capital One", "Morgan Stanley", "Bank of America", "Wells Fargo", "BlackRock", "Point72", "D. E. Shaw", "Hudson River Trading", "Jump Trading", "Optiver", "Susquehanna", "OpenAI", "Anthropic", "Scale AI", "Coinbase", "Robinhood", "SiriusXM", "Genpact"]
 size_red_flags = ["fortune 500", "10,000+ employees", "5,000+ employees", "global offices", "publicly traded"]
 target_titles = ["ai engineer", "ai engineering intern", "software engineering intern", "engineering intern", "product manager intern", "product management intern", "gtm engineering", "ai business operations", "ai operations intern", "founders associate"]

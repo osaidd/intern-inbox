@@ -79,6 +79,23 @@ def test_main_drops_non_intern_rows_before_insert(tmp_path, monkeypatch):
     assert "non_intern=1" in log["summary"]
 
 
+def test_main_migrates_a_fresh_db_itself(tmp_path, monkeypatch):
+    """First use on a clone: nothing has run /setup, so the DB file has no schema.
+    main() must apply migrations itself instead of tracebacking on 'no such table'."""
+    monkeypatch.setattr(db, "DB_PATH", tmp_path / "inbox.db")   # deliberately NOT migrated
+    monkeypatch.setattr(ats_pull, "load_orgs", lambda: (["solva"], []))
+    monkeypatch.setattr(ats_pull.ats, "fetch", lambda *a, **k: ([_job()], []))
+    stats = ats_pull.main(trigger="manual")
+    assert stats["new"] == 1
+    conn = db.connect()
+    tables = {r["name"] for r in
+              conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+    log = conn.execute("SELECT skill, status FROM run_log ORDER BY id DESC LIMIT 1").fetchone()
+    conn.close()
+    assert {"opportunities", "companies", "run_log", "schema_migrations"} <= tables
+    assert log["skill"] == "ats-pull" and log["status"] == "ok"
+
+
 def test_load_orgs_reads_sources_toml():
     ashby, greenhouse = ats_pull.load_orgs()
     assert isinstance(ashby, list) and isinstance(greenhouse, list)

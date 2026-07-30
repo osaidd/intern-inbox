@@ -41,6 +41,7 @@ def load_orgs() -> tuple:
 
 def main(dry_run: bool = False, trigger: str = "manual"):
     started = datetime.now().isoformat(timespec="seconds")
+    db.migrate()      # first run on a clone may predate /setup; no-op when current
     load_env()
     cfg = ch_config.load()
     ashby_orgs, greenhouse_orgs = load_orgs()
