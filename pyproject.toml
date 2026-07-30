@@ -22,6 +22,11 @@ packages = ["career_inbox"]
 
 [tool.uv]
 package = true
+# python-jobspy 1.1.82 hard-pins numpy==1.26.3, which has no Python-3.14 wheels —
+# fresh installs would compile numpy from C source (minutes, or a failed build).
+# Override to a wheels-only numpy; pandas 2.3.3 (jobspy's own floor) is numpy-2
+# compatible and ships cp314 wheels.
+override-dependencies = ["numpy>=2.1"]
 
 [dependency-groups]
 dev = [
