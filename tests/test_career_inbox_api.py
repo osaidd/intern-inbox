@@ -71,6 +71,17 @@ def test_status_note_bulk_endpoints(client):
     assert client.get("/api/jobs").json()["total"] == 0
 
 
+def test_jobs_carry_term(client):
+    """Internships have a season — the API derives it from title/JD per row."""
+    client.post("/api/add", json=[{"company": "Vantable",
+                                   "role": "Platform Intern (Summer 2027)",
+                                   "url": "https://v.co/t", "location": "Brooklyn, NY"}])
+    jobs = client.get("/api/jobs").json()["jobs"]
+    by_co = {j["company"]: j for j in jobs}
+    assert by_co["Vantable"]["term"] == "Summer 2027"
+    assert by_co["Solva"]["term"] is None       # no season anywhere → honest None
+
+
 def test_add_endpoint_inserts_and_dedupes(client):
     payload = [{"company": "Vantable", "role": "AI Engineering Intern", "url": "https://v.co/1",
                 "location": "Brooklyn, NY", "stage_hint": "seed", "headcount_hint": 12}]

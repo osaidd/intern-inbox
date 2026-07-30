@@ -17,6 +17,7 @@ from career_hunt.emailer import EmailError, render_digest, send  # noqa: E402
 from career_hunt.families import role_family  # noqa: E402
 from career_hunt.models import Job  # noqa: E402
 from career_hunt.store import get_or_create_company, insert_job  # noqa: E402
+from career_hunt.term import term  # noqa: E402
 from career_inbox import actions, pull  # noqa: E402
 from feeds.ats_pull import load_orgs  # noqa: E402
 from feeds.envfile import load_env  # noqa: E402
@@ -93,7 +94,7 @@ def jobs(statuses: str = "live"):
     conn = db.connect_ro()
     try:
         rows = _rows(conn,
-                     f"SELECT {JOB_COLS} FROM opportunities o "
+                     f"SELECT {JOB_COLS}, o.jd_text FROM opportunities o "
                      "LEFT JOIN companies c ON c.id = o.company_id "
                      f"WHERE o.status IN ({marks}) "
                      f"ORDER BY {PRIORITY_RANK}, o.score IS NULL, o.score DESC, "
@@ -102,6 +103,8 @@ def jobs(statuses: str = "live"):
         conn.close()
     for r in rows:
         r["family"] = role_family(r["role"])
+        # jd_text is fetched only to derive the term — never shipped to the list
+        r["term"] = term(r["role"], r.pop("jd_text"))
     return {"jobs": rows, "total": len(rows)}
 
 
@@ -118,6 +121,7 @@ def job_detail(job_id: int):
     if not rows:
         raise HTTPException(404, "no such job")
     rows[0]["family"] = role_family(rows[0]["role"])
+    rows[0]["term"] = term(rows[0]["role"], rows[0]["jd_text"])
     return rows[0]
 
 

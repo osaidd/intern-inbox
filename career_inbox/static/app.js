@@ -277,6 +277,7 @@ const COLS = [
   { key: "company", label: "Company", sortable: true },
   { key: "role", label: "Role", sortable: true },
   { key: "family", label: "Family", sortable: true },
+  { key: "term", label: "Term", sortable: true },
   { key: "work_mode", label: "Mode", sortable: true },
   { key: "score", label: "Fit", sortable: true, cls: "r" },
   { key: "age", label: "Age", sortable: true, cls: "r" },
@@ -501,6 +502,11 @@ function render() {
     const famTd = document.createElement("td");
     famTd.className = "sub nowrap"; famTd.textContent = r.family || "—";
     tr.appendChild(famTd);
+
+    const termTd = document.createElement("td");
+    termTd.className = r.term ? "nowrap" : "sub nowrap";
+    termTd.textContent = r.term || "—";
+    tr.appendChild(termTd);
 
     const modeTd = document.createElement("td");
     const ml = modeLabel(r);
@@ -849,7 +855,7 @@ function toggleSort(key) {
   } else {
     S.sort.key = key;
     // sensible first-click direction: text asc, numeric-ish desc
-    S.sort.dir = ["company", "role", "family", "work_mode", "source",
+    S.sort.dir = ["company", "role", "family", "term", "work_mode", "source",
                   "priority"].includes(key) ? "asc" : "desc";
   }
   syncHash();
@@ -1046,7 +1052,7 @@ function flashRow(key) {
 }
 
 /* ---------------- CSV export (current filtered+sorted view) ---------------- */
-const CSV_COLS = ["company", "role", "url", "priority", "status", "family",
+const CSV_COLS = ["company", "role", "url", "priority", "status", "family", "term",
   "stage", "headcount", "work_mode", "score", "posted_date", "discovered_date",
   "applied_date", "source", "notes"];
 
