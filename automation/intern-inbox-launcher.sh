@@ -7,7 +7,9 @@
 if [[ "$(uname -m)" != "arm64" ]]; then exec arch -arm64 /bin/zsh "$0" "$@"; fi
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 PORT=8477
+# Finder gives an app almost no PATH, so probe the known install locations first.
 UV="$HOME/.local/bin/uv"
+[[ -x "$UV" ]] || UV="/opt/homebrew/bin/uv"
 [[ -x "$UV" ]] || UV="$(command -v uv)"
 LOGS="$HOME/.intern-inbox/logs"
 mkdir -p "$LOGS"

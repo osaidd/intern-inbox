@@ -71,9 +71,11 @@ Claude Code will:
    alerts. Those are steps 4 and 5 below; Claude Code waits for you at each one.
 5. **Run a first pull** and open the app at http://127.0.0.1:8477.
 
-Email digests are off. Nothing gets sent anywhere unless you turn it on later
-yourself (set `enabled = true` under `[email]` in `config/career.toml` and add
-`CAREER_SMTP_PASS` to `config/.env`).
+The app cannot send any email until you add `CAREER_SMTP_PASS` to `config/.env`
+yourself. `/setup` never adds it, so out of the box nothing is sent anywhere.
+Adding it turns on the **Email ♥** button in the app (step 6); the automatic
+digests after each check also need `enabled = true` under `[email]` in
+`config/career.toml`.
 
 You can run `/setup` again any time to change your profile, roles, or email —
 it will ask what you want to update instead of starting over.
@@ -135,6 +137,11 @@ Then open <http://127.0.0.1:8477>. Two tabs at the top:
 Press **Check now** to pull fresh listings. Then go down the list: heart the ones
 worth applying to, X the ones that are not, and move a row to **Applied** once
 you have applied. Press **CSV** to export.
+
+The **Email ♥** button emails you everything you have hearted or applied to. It
+needs `CAREER_SMTP_PASS` in `config/.env` — the app password from step 4 works.
+Without it the button shows "email failed: CAREER_SMTP_PASS not set", which is
+expected, not a broken install. Ignore the button if you do not want the email.
 
 Run `git pull` every week or so — other students add company boards, and you get
 them for free.

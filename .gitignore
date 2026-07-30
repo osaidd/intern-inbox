@@ -5,6 +5,12 @@ config/.env
 profile/
 data/
 vault/
+# your resume — /setup asks you to drop it in the repo folder, so it must never
+# be stageable by a `git add -A` before a pull request
+*.pdf
+*.docx
+resume*
+Resume*
 # python
 __pycache__/
 *.pyc
