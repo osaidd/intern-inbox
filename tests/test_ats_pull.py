@@ -34,9 +34,15 @@ def test_main_inserts_logs_and_dedupes(tmp_path, monkeypatch):
     assert row["salary_text"] == "$25 - $35 per hour"   # comp survives to the row
     assert log["skill"] == "ats-pull" and log["status"] == "ok"
     assert "new=1" in log["summary"] and "org_errors=1" in log["summary"]
-    # second pass: same job → dup, nothing new
+    # second pass: same job → dup, nothing new — but a missing score self-heals
+    conn = db.connect()
+    conn.execute("UPDATE opportunities SET score=NULL")
+    conn.commit(); conn.close()
     stats2 = ats_pull.main(trigger="manual")
     assert stats2["new"] == 0 and stats2["dup"] == 1
+    conn = db.connect()
+    assert conn.execute("SELECT score FROM opportunities").fetchone()["score"] > 0
+    conn.close()
 
 
 def test_main_logs_error_row_on_total_failure(tmp_path, monkeypatch):

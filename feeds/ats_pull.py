@@ -73,10 +73,14 @@ def main(dry_run: bool = False, trigger: str = "manual"):
                     new_rows.append({"company": j.company, "role": j.role,
                                      "url": j.url, "priority": pri,
                                      "source": j.source})
+                if outcome in ("new", "dup") and not dry_run:
+                    # score lands at ingest; re-sightings self-heal rows that
+                    # predate scoring (score is only ever backfilled, never moved)
                     s = score_job(j.role, j.jd_text, j.posted_date, legacy_cfg)
-                    if s is not None and not dry_run:
+                    if s is not None:
                         conn.execute(
-                            "UPDATE opportunities SET score=? WHERE dedupe_hash=?",
+                            "UPDATE opportunities SET score=? "
+                            "WHERE dedupe_hash=? AND score IS NULL",
                             (s, j.dedupe_hash()))
                         conn.commit()
         finally:
