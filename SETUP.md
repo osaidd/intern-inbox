@@ -9,6 +9,11 @@ the setup happens by talking to Claude Code, so this is required.
 
 ---
 
+> **Shortcut:** steps 1 and 2 are one paste in Terminal:
+> `curl -LsSf https://raw.githubusercontent.com/osaidd/intern-inbox/main/bootstrap.sh | sh`
+> It installs uv if needed, downloads the project to `~/intern-inbox`, and
+> installs dependencies. Then jump to step 3.
+
 ## 1. Install uv
 
 `uv` is the tool that installs Python and the project's dependencies. One
@@ -50,11 +55,20 @@ computer.
 
 ## 3. Run /setup in Claude Code
 
-Open the `intern-inbox` folder in Claude Code and type:
+Open the `intern-inbox` folder in Claude Code (File → Open… and pick the folder
+itself — not your home folder, not Desktop) and type:
 
 ```
 /setup
 ```
+
+Two things that trip people up:
+
+- **`/setup` not recognized?** Claude Code has the wrong folder open. Open the
+  `intern-inbox` folder itself and try again.
+- **Run it on your own computer.** A claude.ai cloud session runs in a sandbox
+  that cannot reach the job-board APIs — the pull will fail there with
+  "host not allowed" errors that have nothing to do with your setup.
 
 Claude Code will:
 

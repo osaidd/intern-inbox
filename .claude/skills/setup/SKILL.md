@@ -15,6 +15,15 @@ run_log write is non-optional even for a partial update — name the updated
 section(s) in the summary, e.g. "updated: roles").
 
 ## Flow
+0. **Environment check — before the interview, silently:** confirm this folder
+   is the intern-inbox repo (`pyproject.toml` says `name = "intern-inbox"`; if
+   not, tell the user to open the intern-inbox folder itself in Claude Code and
+   stop). Confirm `uv` exists (`command -v uv || ls ~/.local/bin/uv`; if
+   missing, give them the one-liner from SETUP.md and wait). If `.venv/` is
+   missing, run `uv sync` yourself and say "installing dependencies — a few
+   minutes the first time." Never surface raw dependency errors or tracebacks:
+   fix quietly, summarize in one plain sentence, and only escalate to the user
+   if something genuinely needs their input.
 1. **Interview — one question at a time:**
    - Target role types (multiple choice: AI/SWE eng · product · GTM/growth ·
      data · ops/BizOps · other)
@@ -64,6 +73,11 @@ section(s) in the summary, e.g. "updated: roles").
    setup), then `uv run intern-inbox` and open http://127.0.0.1:8477 — the ATS
    tab should show internships right now. If the mail password was set, also
    run `uv run python -m feeds.linkedin_mail_pull` (0 found is normal on day 1).
+   **Restricted-network fallback:** if every board fails the same way (403s,
+   `host_not_allowed`, connection refused), you are likely in a sandboxed
+   environment whose network blocks those hosts — not a repo problem. Say that
+   in one sentence, smoke-test with `uv run python -m feeds.github_intern_pull`
+   instead, and note the ATS pull will work when run on the user's own machine.
 7. **Record:** `db.log_run(skill='setup', trigger='manual', status='ok',
    summary=..., started_at=..., finished_at=...)`. Summary text depends on
    which path ran: `'profile + config written; smoke pull N rows'` on a first

@@ -22,27 +22,36 @@ before it reaches you.
 
 ## Quickstart
 
+Paste this one command into Terminal (it installs what's missing, downloads the
+project to `~/intern-inbox`, and sets it up):
+
 ```bash
-git clone https://github.com/osaidd/intern-inbox.git intern-inbox
-cd intern-inbox
-uv sync
+curl -LsSf https://raw.githubusercontent.com/osaidd/intern-inbox/main/bootstrap.sh | sh
 ```
 
-Then open the folder in Claude Code and type:
+Then open the `intern-inbox` folder in Claude Code (File → Open… → your home
+folder → intern-inbox) and type:
 
 ```
 /setup
 ```
 
-Claude Code asks about the roles you want, reads your resume, writes your
-config, and walks you through connecting your email. At the end it runs a first
-pull and opens the app at http://127.0.0.1:8477.
+Claude asks about the roles you want, reads your resume, writes your config,
+and walks you through connecting your email. At the end it runs a first pull
+and opens the app at http://127.0.0.1:8477.
+
+If `/setup` isn't recognized, Claude Code is looking at the wrong folder — open
+the `intern-inbox` folder itself, not your home folder or Desktop. And run it in
+Claude Code on your own computer (not a claude.ai cloud session — those can't
+reach the job boards).
 
 After that, the daily loop is: open the app, press **Check now**, triage the new
 rows. Run `git pull` now and then to pick up boards other students added.
 
-No uv yet? `curl -LsSf https://astral.sh/uv/install.sh | sh` — full walkthrough
-in [SETUP.md](SETUP.md).
+Prefer doing the steps by hand? Install [uv](https://docs.astral.sh/uv/) first
+(`curl -LsSf https://astral.sh/uv/install.sh | sh`), then
+`git clone https://github.com/osaidd/intern-inbox.git && cd intern-inbox && uv sync`
+— full walkthrough in [SETUP.md](SETUP.md).
 
 ## What it pulls
 

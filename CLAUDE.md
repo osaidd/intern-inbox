@@ -1,5 +1,13 @@
 # intern-inbox — conventions
 
+## Fresh install? Take the wheel.
+If `config/career.toml` does NOT exist, this is a brand-new install and the user
+is likely non-technical. Whatever their first message says — "hi", "what is
+this?", anything — greet them, say setup is a ~15-minute conversation, and start
+the `setup` skill immediately. Do not wait for them to know the `/setup` command,
+and never surface raw dependency or traceback output at them: fix quietly,
+summarize in one plain sentence.
+
 NYC/NJ **internships only** — the NYC/NJ metro gate is hard-coded in
 `career_hunt/score.py`; internships-only is enforced in the same module's `matches()`
 behind the `[hunt].interns_only` config flag (default true).
