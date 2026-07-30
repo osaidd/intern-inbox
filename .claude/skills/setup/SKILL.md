@@ -1,6 +1,6 @@
 ---
 name: setup
-description: First-run personalization for intern-inbox — interviews the user, ingests their resume, writes ALL personal config (career.toml, .env, profile.md), walks through Gmail app password + job-alert subscriptions, then smoke-tests a pull. Use on "/setup", "set me up", "get started", or when config/career.toml is missing. Re-runnable: with existing config it switches to update-my-profile mode.
+description: First-run personalization for intern-inbox — interviews the user, ingests their resume, writes ALL personal config (career.toml, .env, profile.md), walks through Gmail app password + job-alert subscriptions, then smoke-tests a pull. Use when the user says /setup, "set me up", "get started", or when config/career.toml is missing. Re-runnable: with existing config it switches to update-my-profile mode.
 ---
 
 # setup
@@ -10,7 +10,9 @@ Everything you write goes in GITIGNORED files: `config/career.toml`,
 personal values into tracked files. Record start time (run_log needs it).
 
 If `config/career.toml` exists, say so and ask what to update (profile / roles /
-email / boards) — do only that section, then re-run step 6.
+email / boards) — do only that section, then re-run step 6, then step 7 (the
+run_log write is non-optional even for a partial update — name the updated
+section(s) in the summary, e.g. "updated: roles").
 
 ## Flow
 1. **Interview — one question at a time:**
@@ -23,7 +25,7 @@ email / boards) — do only that section, then re-run step 6.
      blocklist adjustments) — `feeds/config_load.py` merges this gitignored file
      over the communal `config/sources.toml` (lists union and dedupe, so it never
      needs to touch the tracked file)
-   - Their email for job alerts + digests
+   - Their email for job alerts
 2. **Resume:** ask them to drop a PDF into the repo folder or paste text. Read
    it. Derive: profile keywords (10-15 lowercase tokens), target titles
    (5-10), 2-3 sentence background summary.
@@ -63,12 +65,19 @@ email / boards) — do only that section, then re-run step 6.
    tab should show internships right now. If the mail password was set, also
    run `uv run python -m feeds.linkedin_mail_pull` (0 found is normal on day 1).
 7. **Record:** `db.log_run(skill='setup', trigger='manual', status='ok',
-   summary='profile + config written; smoke pull N rows', started_at=...,
-   finished_at=...)`.
+   summary=..., started_at=..., finished_at=...)`. Summary text depends on
+   which path ran: `'profile + config written; smoke pull N rows'` on a first
+   run, or `'updated: <section(s)>'` (e.g. `'updated: roles, email'`) on a
+   partial update-mode run. Write this row on every run, full or partial —
+   never skip it.
 8. Tell them the daily loop: open the app → Check now → triage; "/skills-gap"
    after a few days of data; `git pull` occasionally for cohort updates.
 
 ## Rules
+- Email digests are OUT OF SCOPE for this skill and optional/off by default —
+  `/setup` never sets `[email] enabled` or scaffolds `CAREER_SMTP_PASS`. To
+  enable later: set `[email] enabled = true` in `config/career.toml` and add
+  `CAREER_SMTP_PASS` to `config/.env`.
 - The four personal files this skill writes are all covered by `.gitignore`
   (`config/career.toml`, `config/sources.local.toml`, `config/.env`,
   `profile/`) — never `git add` them, and if in doubt run

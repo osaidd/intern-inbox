@@ -55,7 +55,10 @@ wellfound_enabled = true
 wellfound_sender = "team@hi.wellfound.com"
 
 [email]
-# /setup fills these; password lives in config/.env (CAREER_SMTP_PASS / CAREER_IMAP_PASS)
+# /setup fills `to` and `smtp_user` from your job-alert address; CAREER_IMAP_PASS
+# (config/.env) covers job-alert ingestion and is all /setup scaffolds. Digest
+# sending stays off by default — to enable it later, manually set enabled = true
+# here and add CAREER_SMTP_PASS to config/.env.
 enabled = false
 to = ""
 smtp_host = "smtp.gmail.com"
