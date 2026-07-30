@@ -205,7 +205,6 @@ th.on .arrow { color: var(--ink); }
 td.age { font-variant-numeric: tabular-nums; color: var(--text); white-space: nowrap; }
 td.age.stale { color: var(--muted); }
 td.age .stale-flag { color: var(--muted); font-size: 12px; }
-td.age .fresh-flag { color: var(--ink); font-size: 12px; font-weight: 500; }
 
 /* ---------- ATS grouped view ---------- */
 tr.grp td { background: var(--surface); border-top: 1px solid var(--line-strong);

@@ -4,14 +4,20 @@ from fastapi.testclient import TestClient
 import db
 
 
-def test_meta_carries_ats_watching_block(client):
-    """The ATS page's 'watching' header needs: how many boards are swept, how
-    many companies currently list internships, and when the last sweep ran."""
+def test_meta_carries_ats_watching_block(client, monkeypatch):
+    """The ATS page's 'watching' header needs the board count and last sweep —
+    decoupled from the real sources.toml so config edits can't break this test."""
+    from career_inbox import web
+    monkeypatch.setattr(web, "load_orgs", lambda: (["a", "b"], ["c"]))
     m = client.get("/api/meta").json()
-    ats = m["ats"]
-    assert ats["boards"] >= 60                    # communal list is ~65 boards
-    assert isinstance(ats["listings"], int) and isinstance(ats["companies"], int)
-    assert "last_sweep" in ats                    # None until ats-pull has run
+    assert m["ats"]["boards"] == 3
+    assert "last_sweep" in m["ats"]              # None until ats-pull has run
+    # a broken sources config degrades the ledger, never 500s the dashboard
+    def boom():
+        raise RuntimeError("bad toml")
+    monkeypatch.setattr(web, "load_orgs", boom)
+    r = client.get("/api/meta")
+    assert r.status_code == 200 and r.json()["ats"]["boards"] == 0
 
 
 @pytest.fixture()

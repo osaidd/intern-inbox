@@ -149,13 +149,14 @@ def meta():
     counts = {"live": sum(by_status.get(s, 0) for s in LIVE), **by_status,
               "high": by_pri.get("high", 0), "medium": by_pri.get("medium", 0),
               "low": by_pri.get("low", 0)}
-    # the ATS page's "watching" ledger: boards swept vs boards actually listing
-    ashby_orgs, greenhouse_orgs = load_orgs()
-    ats_rows = [r for r in live_rows if r["source"] in ("ashby", "greenhouse")]
-    ats = {"boards": len(ashby_orgs) + len(greenhouse_orgs),
-           "listings": len(ats_rows),
-           "companies": len({(r["company"] or "").strip().lower() for r in ats_rows}),
-           "last_sweep": sweep[0] if sweep else None}
+    # the ATS page's "watching" ledger. A malformed sources.toml must degrade
+    # the ledger, never 500 the whole dashboard.
+    try:
+        ashby_orgs, greenhouse_orgs = load_orgs()
+        boards = len(ashby_orgs) + len(greenhouse_orgs)
+    except Exception:  # noqa: BLE001
+        boards = 0
+    ats = {"boards": boards, "last_sweep": sweep[0] if sweep else None}
     return {"counts": counts,
             "families": sorted({role_family(r["role"]) for r in live_rows}),
             "stages": sorted({r["stage"] for r in live_rows if r["stage"]}),

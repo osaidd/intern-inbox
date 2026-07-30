@@ -21,6 +21,8 @@ def test_jd_needs_season_plus_year():
 def test_spring_boot_never_matches():
     assert term("Java Spring Boot Intern") is None
     assert term("Intern", "Experience with Spring Framework required.") is None
+    assert term("Backend Intern (Spring MVC)") is None
+    assert term("Intern", "You will use Spring Data 2027 pipelines.") is None
 
 
 def test_autumn_normalizes_and_none_is_safe():

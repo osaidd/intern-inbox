@@ -419,12 +419,6 @@ function ageCell(r) {
   td.className = "age r";
   const days = ageDays(r);
   td.appendChild(document.createTextNode(days == null ? "—" : `${days}d`));
-  if (isFresh(r)) {
-    const f = document.createElement("span");
-    f.className = "fresh-flag"; f.textContent = " · today";
-    td.appendChild(f);
-    return td;                       // fresh beats stale — never both
-  }
   const stale = staleDays(r);
   if (stale != null && stale > 21) {
     td.classList.add("stale");
@@ -438,7 +432,6 @@ function ageCell(r) {
 function render() {
   renderHead();
   const rows = applyFilters();
-  S.shownIds = rows.map((r) => r.id);
   const pageRows = S.rows.filter(pageMatch);
 
   // showing N of M (M = rows on this page, not the whole fetch)
@@ -475,6 +468,9 @@ function render() {
   grid.style.display = "";
   empty.hidden = true;
 
+  // select-all/bulk must never touch rows hidden inside a folded group —
+  // shownIds is built from what actually renders, not from the filter result
+  S.shownIds = [];
   if (S.page === "ats" && S.grouped) {
     // board view: one header per company, roles beneath, click to fold
     const groups = new Map();
@@ -485,10 +481,13 @@ function render() {
     }
     for (const [k, members] of groups) {
       tbody.appendChild(groupHeaderRow(k, members));
-      if (!S.folded.has(k)) for (const r of members) tbody.appendChild(buildRow(r));
+      if (!S.folded.has(k)) for (const r of members) {
+        tbody.appendChild(buildRow(r));
+        S.shownIds.push(r.id);
+      }
     }
   } else {
-    for (const r of rows) tbody.appendChild(buildRow(r));
+    for (const r of rows) { tbody.appendChild(buildRow(r)); S.shownIds.push(r.id); }
   }
   updateSelectAll();
   updateBulkBar();
@@ -717,7 +716,8 @@ function renderCounts() {
       `<b>${c.live ?? 0}</b> live · <b>${c.high ?? 0}</b> high · ` +
       `<b>${c.medium ?? 0}</b> med · <b>${c.low ?? 0}</b> low · checked ${ago}`;
   }
-  if (lc && lc.summary) el.title = lc.summary;
+  if (S.page !== "ats" && lc && lc.summary) el.title = lc.summary;
+  else el.title = "";
 }
 
 /* the ATS pagebar reframes sparseness as surveillance: most boards genuinely

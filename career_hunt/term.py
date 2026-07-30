@@ -7,9 +7,9 @@ is noise. "Spring Boot"/"Spring Framework" never match."""
 import re
 
 _SEASON = r"(summer|fall|autumn|spring|winter)"
-_TITLE_RE = re.compile(rf"\b{_SEASON}\b(?!\s+(?:boot|framework))(?:\s*'?(\d{{4}}|\d{{2}})\b)?",
+_TITLE_RE = re.compile(rf"\b{_SEASON}\b(?!\s+(?:boot|framework|mvc|cloud|batch|data|security))(?:\s*'?(\d{{4}}|\d{{2}})\b)?",
                        re.IGNORECASE)
-_JD_RE = re.compile(rf"\b{_SEASON}\s*'?(\d{{4}})\b(?!\s*(?:boot|framework))",
+_JD_RE = re.compile(rf"\b{_SEASON}\s*'?(\d{{4}})\b(?!\s*(?:boot|framework|mvc|cloud|batch|data|security))",
                     re.IGNORECASE)
 
 
