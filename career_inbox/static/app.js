@@ -79,6 +79,8 @@ function staleDays(r) {
 }
 const modeLabel = (r) =>
   (!r.work_mode || r.work_mode === "unknown") ? "" : r.work_mode;
+/* first seen in today's sweep — the delta is what matters on board data */
+const isFresh = (r) => r.discovered_date === TODAY;
 const isHttps = (u) => typeof u === "string" && /^https:\/\//i.test(u);
 
 /* true if `status` still belongs in the active status filter (drives optimistic
@@ -239,6 +241,12 @@ function sortRows(rows) {
   const mul = dir === "asc" ? 1 : -1;
   const priOf = (r) => (r.priority in PRI_RANK ? PRI_RANK[r.priority] : 3);
   const cmp = (a, b) => {
+    // ATS boards arrive in daily sweeps — today's finds float above everything,
+    // then the chosen sort applies within each band
+    if (S.page === "ats") {
+      const d = isFresh(b) - isFresh(a);
+      if (d) return d;
+    }
     if (key === "priority") {
       const d = priOf(a) - priOf(b);
       if (d) return d * mul;
@@ -405,6 +413,12 @@ function ageCell(r) {
   td.className = "age r";
   const days = ageDays(r);
   td.appendChild(document.createTextNode(days == null ? "—" : `${days}d`));
+  if (isFresh(r)) {
+    const f = document.createElement("span");
+    f.className = "fresh-flag"; f.textContent = " · today";
+    td.appendChild(f);
+    return td;                       // fresh beats stale — never both
+  }
   const stale = staleDays(r);
   if (stale != null && stale > 21) {
     td.classList.add("stale");
@@ -633,11 +647,14 @@ function renderCounts() {
   const lc = m.last_check;
   const ago = checkedAgo(lc);
   if (S.page === "ats") {
-    // ATS page has its own ledger: intern listings + orgs, not the funnel counts
+    // ATS page has its own ledger: the watching, not just the catches
     const rows = S.rows.filter(pageMatch);
     const orgs = new Set(rows.map((r) => coKey(r.company))).size;
-    el.innerHTML = `<b>${rows.length}</b> intern listings · ` +
-                   `<b>${orgs}</b> companies · checked ${ago}`;
+    const a = m.ats || {};
+    const boards = a.boards ? `<b>${a.boards}</b> boards · swept ${checkedAgo(a.last_sweep)} · ` : "";
+    el.innerHTML = boards + `<b>${orgs}</b> companies listing · ` +
+                   `<b>${rows.length}</b> intern roles`;
+    renderPagebar(a, orgs);
   } else {
     const c = m.counts || {};
     el.innerHTML =
@@ -645,6 +662,18 @@ function renderCounts() {
       `<b>${c.medium ?? 0}</b> med · <b>${c.low ?? 0}</b> low · checked ${ago}`;
   }
   if (lc && lc.summary) el.title = lc.summary;
+}
+
+/* the ATS pagebar reframes sparseness as surveillance: most boards genuinely
+   have no intern post today — say so, so an empty-ish page reads as "watching" */
+function renderPagebar(a, orgsListing) {
+  const el = $("pagebar");
+  if (!a || !a.boards) return;   // static fallback text stays until meta loads
+  const quiet = Math.max(0, a.boards - orgsListing);
+  el.textContent =
+    `Internships only, pulled daily from the Ashby + Greenhouse boards of ` +
+    `${a.boards} companies. ${quiet} boards have no intern posting right now — ` +
+    `the day one goes up, it appears here.`;
 }
 
 function checkedAgo(lc) {

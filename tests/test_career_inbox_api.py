@@ -4,6 +4,16 @@ from fastapi.testclient import TestClient
 import db
 
 
+def test_meta_carries_ats_watching_block(client):
+    """The ATS page's 'watching' header needs: how many boards are swept, how
+    many companies currently list internships, and when the last sweep ran."""
+    m = client.get("/api/meta").json()
+    ats = m["ats"]
+    assert ats["boards"] >= 60                    # communal list is ~65 boards
+    assert isinstance(ats["listings"], int) and isinstance(ats["companies"], int)
+    assert "last_sweep" in ats                    # None until ats-pull has run
+
+
 @pytest.fixture()
 def client(tmp_path, monkeypatch):
     monkeypatch.setattr(db, "DB_PATH", tmp_path / "life.db")

@@ -18,6 +18,7 @@ from career_hunt.families import role_family  # noqa: E402
 from career_hunt.models import Job  # noqa: E402
 from career_hunt.store import get_or_create_company, insert_job  # noqa: E402
 from career_inbox import actions, pull  # noqa: E402
+from feeds.ats_pull import load_orgs  # noqa: E402
 from feeds.envfile import load_env  # noqa: E402
 
 
@@ -130,21 +131,32 @@ def meta():
         by_pri = {r["priority"]: r["n"] for r in _rows(
             conn, f"SELECT priority, count(*) n FROM opportunities "
                   f"WHERE status IN ({marks}) GROUP BY priority", LIVE)}
-        live_rows = _rows(conn, f"SELECT o.role, o.source, c.stage FROM opportunities o "
+        live_rows = _rows(conn, f"SELECT o.role, o.source, o.company, c.stage "
+                                "FROM opportunities o "
                                 "LEFT JOIN companies c ON c.id=o.company_id "
                                 f"WHERE o.status IN ({marks})", LIVE)
         last = _rows(conn, "SELECT started_at, finished_at, status, summary FROM run_log "
                            "WHERE skill='career-inbox-check' "
                            "ORDER BY started_at DESC, id DESC LIMIT 1")
+        sweep = _rows(conn, "SELECT started_at FROM run_log WHERE skill='ats-pull' "
+                            "AND status='ok' ORDER BY started_at DESC, id DESC LIMIT 1")
     finally:
         conn.close()
     counts = {"live": sum(by_status.get(s, 0) for s in LIVE), **by_status,
               "high": by_pri.get("high", 0), "medium": by_pri.get("medium", 0),
               "low": by_pri.get("low", 0)}
+    # the ATS page's "watching" ledger: boards swept vs boards actually listing
+    ashby_orgs, greenhouse_orgs = load_orgs()
+    ats_rows = [r for r in live_rows if r["source"] in ("ashby", "greenhouse")]
+    ats = {"boards": len(ashby_orgs) + len(greenhouse_orgs),
+           "listings": len(ats_rows),
+           "companies": len({(r["company"] or "").strip().lower() for r in ats_rows}),
+           "last_sweep": sweep[0] if sweep else None}
     return {"counts": counts,
             "families": sorted({role_family(r["role"]) for r in live_rows}),
             "stages": sorted({r["stage"] for r in live_rows if r["stage"]}),
             "sources": sorted({r["source"] for r in live_rows}),
+            "ats": ats,
             "last_check": last[0] if last else None}
 
 

@@ -205,6 +205,7 @@ th.on .arrow { color: var(--ink); }
 td.age { font-variant-numeric: tabular-nums; color: var(--text); }
 td.age.stale { color: var(--muted); }
 td.age .stale-flag { color: var(--muted); font-size: 12px; }
+td.age .fresh-flag { color: var(--ink); font-size: 12px; font-weight: 500; }
 
 /* notes inline input — edit in place, save on change */
 .note-input { width: 150px; background: transparent;
