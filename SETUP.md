@@ -39,7 +39,7 @@ window and open a fresh one.
 ## 2. Get the code
 
 ```bash
-git clone <repo-url> intern-inbox
+git clone https://github.com/osaidd/intern-inbox.git intern-inbox
 cd intern-inbox
 uv sync
 ```

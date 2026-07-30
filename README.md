@@ -23,7 +23,7 @@ before it reaches you.
 ## Quickstart
 
 ```bash
-git clone <repo-url> intern-inbox
+git clone https://github.com/osaidd/intern-inbox.git intern-inbox
 cd intern-inbox
 uv sync
 ```
