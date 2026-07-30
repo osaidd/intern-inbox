@@ -3,6 +3,8 @@
   "jobs": [
     {"title": "AI Engineering Intern", "location": "New York, NY (HQ)",
      "secondaryLocations": [],
+     "compensation": {"compensationTierSummary": "$25 – $35 per hour • Offers Equity",
+                      "scrapeableCompensationSalarySummary": "$25 - $35 per hour"},
      "descriptionPlain": "ABOUT SOLVA Solva builds agentic finance tools. You will ship LLM and RAG product features with the founding team.",
      "descriptionHtml": "<p>ABOUT SOLVA</p>",
      "jobUrl": "https://jobs.ashbyhq.com/solva/aaaa-1111",

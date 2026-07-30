@@ -48,8 +48,8 @@ def insert_job(conn, job: Job, cfg: Config, dry_run: bool = False):
         return ("excluded", None)
     h = job.dedupe_hash()
     row = conn.execute(
-        "SELECT id, url, jd_text, location, posted_date FROM opportunities "
-        "WHERE dedupe_hash=?", (h,)).fetchone()
+        "SELECT id, url, jd_text, location, posted_date, salary_text "
+        "FROM opportunities WHERE dedupe_hash=?", (h,)).fetchone()
     if row:
         if not dry_run:
             _resight(conn, row, job)
@@ -66,6 +66,7 @@ def insert_job(conn, job: Job, cfg: Config, dry_run: bool = False):
         "source": job.source, "company": job.company.strip(), "role": job.role.strip(),
         "url": job.url, "location": job.location, "posted_date": job.posted_date,
         "jd_text": (job.jd_text or None) and job.jd_text[:20000],
+        "salary_text": job.salary_text,
         "dedupe_hash": h, "priority": stored_pri, "company_id": cid,
         "work_mode": detect_work_mode(job.location, job.jd_text),
         "office_area": job.area, "status": status,
@@ -79,7 +80,8 @@ def _resight(conn, row, job: Job) -> None:
     Never touches status/notes/priority/score (user triage is sacred)."""
     sets, vals = ["last_seen=?"], [date.today().isoformat()]
     for col, new in (("url", job.url), ("jd_text", (job.jd_text or None) and job.jd_text[:20000]),
-                     ("location", job.location), ("posted_date", job.posted_date)):
+                     ("location", job.location), ("posted_date", job.posted_date),
+                     ("salary_text", job.salary_text)):
         if new and not row[col]:
             sets.append(f"{col}=?")
             vals.append(new)

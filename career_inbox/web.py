@@ -67,7 +67,7 @@ PRIORITY_RANK = ("CASE o.priority WHEN 'high' THEN 0 WHEN 'medium' THEN 1 "
                  "WHEN 'low' THEN 2 ELSE 3 END")
 
 JOB_COLS = ("o.id, o.company, o.role, o.url, o.location, o.priority, o.status, "
-            "o.source, o.score, o.work_mode, o.office_area, o.discovered_date, "
+            "o.source, o.score, o.salary_text, o.work_mode, o.office_area, o.discovered_date, "
             "o.posted_date, o.last_seen, o.applied_date, o.notes, "
             "length(o.jd_text) AS jd_len, c.stage, c.headcount, c.sector, "
             "c.website, c.enrich_status, c.lat, c.lon")

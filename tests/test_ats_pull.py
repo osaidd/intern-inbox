@@ -7,7 +7,8 @@ def _job():
     return Job(company="Solva", role="AI Engineering Intern",
                url="https://jobs.ashbyhq.com/solva/aaaa-1111", source="ashby",
                location="New York, NY", posted_date="2026-07-20",
-               jd_text="Ship LLM and RAG product features.")
+               jd_text="Ship LLM and RAG product features.",
+               salary_text="$25 - $35 per hour")
 
 
 def test_main_inserts_logs_and_dedupes(tmp_path, monkeypatch):
@@ -21,7 +22,7 @@ def test_main_inserts_logs_and_dedupes(tmp_path, monkeypatch):
     assert stats["found"] == 1 and stats["new"] == 1 and stats["org_errors"] == 1
     conn = db.connect()
     row = conn.execute(
-        "SELECT source, company, jd_text, score FROM opportunities").fetchone()
+        "SELECT source, company, jd_text, score, salary_text FROM opportunities").fetchone()
     log = conn.execute("SELECT skill, status, summary FROM run_log "
                        "ORDER BY id DESC LIMIT 1").fetchone()
     conn.close()
@@ -30,6 +31,7 @@ def test_main_inserts_logs_and_dedupes(tmp_path, monkeypatch):
     # ATS rows carry full JD at ingest, so they get the profile-fit score
     # immediately too — no jd_hydrate round-trip needed
     assert row["score"] is not None and row["score"] > 0
+    assert row["salary_text"] == "$25 - $35 per hour"   # comp survives to the row
     assert log["skill"] == "ats-pull" and log["status"] == "ok"
     assert "new=1" in log["summary"] and "org_errors=1" in log["summary"]
     # second pass: same job → dup, nothing new

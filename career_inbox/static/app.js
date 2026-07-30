@@ -280,6 +280,7 @@ const COLS = [
   { key: "term", label: "Term", sortable: true },
   { key: "work_mode", label: "Mode", sortable: true },
   { key: "score", label: "Fit", sortable: true, cls: "r" },
+  { key: "salary_text", label: "Comp", sortable: false },
   { key: "age", label: "Age", sortable: true, cls: "r" },
   { key: "source", label: "Source", sortable: true },
   { key: "notes", label: "Notes", sortable: false },
@@ -518,6 +519,11 @@ function render() {
     fitTd.className = "num r";
     fitTd.textContent = r.score == null ? "—" : r.score.toFixed(2);
     tr.appendChild(fitTd);
+
+    const compTd = document.createElement("td");
+    compTd.className = r.salary_text ? "nowrap" : "sub nowrap";
+    compTd.textContent = r.salary_text || "—";
+    tr.appendChild(compTd);
 
     tr.appendChild(ageCell(r));
 
@@ -1052,7 +1058,7 @@ function flashRow(key) {
 }
 
 /* ---------------- CSV export (current filtered+sorted view) ---------------- */
-const CSV_COLS = ["company", "role", "url", "priority", "status", "family", "term",
+const CSV_COLS = ["company", "role", "url", "priority", "status", "family", "term", "salary_text",
   "stage", "headcount", "work_mode", "score", "posted_date", "discovered_date",
   "applied_date", "source", "notes"];
 

@@ -10,7 +10,8 @@ def test_migrate_creates_career_schema(tmp_path, monkeypatch):
     assert {"opportunities", "companies", "run_log"} <= tables
     assert not {"travel_briefs", "accounts", "apartments"} & tables  # career-only cut
     cols = {r["name"] for r in conn.execute("PRAGMA table_info(opportunities)")}
-    assert {"dedupe_hash", "priority", "jd_text", "jd_fetched_at", "last_seen"} <= cols
+    assert {"dedupe_hash", "priority", "jd_text", "jd_fetched_at", "last_seen",
+            "salary_text"} <= cols
     conn.close()
 
 

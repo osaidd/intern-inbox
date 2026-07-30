@@ -18,7 +18,7 @@ from ..htmltext import extract_text
 from ..models import Job
 from ..score import is_nyc_metro, role_strength
 
-ASHBY_URL = "https://api.ashbyhq.com/posting-api/job-board/{org}"
+ASHBY_URL = "https://api.ashbyhq.com/posting-api/job-board/{org}?includeCompensation=true"
 GREENHOUSE_URL = "https://boards-api.greenhouse.io/v1/boards/{org}/jobs?content=true"
 SLEEP = 1.0
 
@@ -55,10 +55,13 @@ def parse_ashby(data: dict, org: str, cfg: Config) -> list:
             continue
         if role_strength(title, jd, cfg) < 1:
             continue
+        comp = e.get("compensation") or {}
+        salary = (comp.get("scrapeableCompensationSalarySummary")
+                  or comp.get("compensationTierSummary"))
         jobs.append(Job(company=_org_name(org), role=title, url=e.get("jobUrl"),
                         source="ashby", location=loc,
                         posted_date=_iso_date(e.get("publishedAt")), jd_text=jd or None,
-                        employment_type=e.get("employmentType")))
+                        employment_type=e.get("employmentType"), salary_text=salary))
     return jobs
 
 

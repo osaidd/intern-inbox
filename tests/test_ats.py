@@ -67,6 +67,8 @@ def test_parse_ashby_filters_and_maps():
     assert j.location == "New York, NY (HQ)"
     assert j.posted_date == "2026-07-20"            # publishedAt ISO → date
     assert "LLM and RAG product" in j.jd_text       # descriptionPlain carried whole
+    assert j.salary_text == "$25 - $35 per hour"    # compensation → clean summary
+    assert by_role["Product Intern"].salary_text is None  # absent stays None
     assert by_role["Product Intern"].location == "New York, NY"  # the NYC secondary wins
 
 
