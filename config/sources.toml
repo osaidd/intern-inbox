@@ -50,15 +50,15 @@ templates = [
   "NYC AI startup hiring intern engineering product {month} {year}",
 ]
 
-[[firecrawl_targets]]
+[[board_targets]]
 name = "yc_waas"
 url = "https://www.workatastartup.com/companies?locations=New+York"
 
-[[firecrawl_targets]]
+[[board_targets]]
 name = "wellfound_ny_swe"
 url = "https://wellfound.com/role/l/software-engineer/new-york"
 
-[[firecrawl_targets]]
+[[board_targets]]
 name = "builtin_nyc"
 # Built In NYC shows company size on postings — the scan's enrichment pass
 # captures stage/headcount hints from here into the companies table.
