@@ -20,12 +20,16 @@ def test_main_inserts_logs_and_dedupes(tmp_path, monkeypatch):
     stats = ats_pull.main(trigger="manual")
     assert stats["found"] == 1 and stats["new"] == 1 and stats["org_errors"] == 1
     conn = db.connect()
-    row = conn.execute("SELECT source, company, jd_text FROM opportunities").fetchone()
+    row = conn.execute(
+        "SELECT source, company, jd_text, score FROM opportunities").fetchone()
     log = conn.execute("SELECT skill, status, summary FROM run_log "
                        "ORDER BY id DESC LIMIT 1").fetchone()
     conn.close()
     assert row["source"] == "ashby" and row["company"] == "Solva"
     assert "LLM and RAG" in row["jd_text"]          # jd_text lands at ingest, no hydration
+    # ATS rows carry full JD at ingest, so they get the profile-fit score
+    # immediately too — no jd_hydrate round-trip needed
+    assert row["score"] is not None and row["score"] > 0
     assert log["skill"] == "ats-pull" and log["status"] == "ok"
     assert "new=1" in log["summary"] and "org_errors=1" in log["summary"]
     # second pass: same job → dup, nothing new

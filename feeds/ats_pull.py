@@ -58,6 +58,10 @@ def main(dry_run: bool = False, trigger: str = "manual"):
                    if ats.is_internship(j.role, j.jd_text, j.employment_type)]
         stats["non_intern"] = len(jobs) - len(interns)
         jobs = interns
+        # ATS rows carry the full JD at ingest, so the profile-fit score lands
+        # immediately (jobspy_pull pattern) — no jd_hydrate round-trip.
+        from feeds.jobspy_pull import load_config, score_job
+        legacy_cfg = load_config()
         conn = db.connect()
         try:
             for j in jobs:
@@ -69,6 +73,12 @@ def main(dry_run: bool = False, trigger: str = "manual"):
                     new_rows.append({"company": j.company, "role": j.role,
                                      "url": j.url, "priority": pri,
                                      "source": j.source})
+                    s = score_job(j.role, j.jd_text, j.posted_date, legacy_cfg)
+                    if s is not None and not dry_run:
+                        conn.execute(
+                            "UPDATE opportunities SET score=? WHERE dedupe_hash=?",
+                            (s, j.dedupe_hash()))
+                        conn.commit()
         finally:
             conn.close()
     except Exception as e:
