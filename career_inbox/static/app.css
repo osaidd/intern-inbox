@@ -202,10 +202,17 @@ th.on .arrow { color: var(--ink); }
 .co-sub { color: var(--muted); font-size: 12px; }
 
 /* age cell: stale fade when last seen > 21d ago */
-td.age { font-variant-numeric: tabular-nums; color: var(--text); }
+td.age { font-variant-numeric: tabular-nums; color: var(--text); white-space: nowrap; }
 td.age.stale { color: var(--muted); }
 td.age .stale-flag { color: var(--muted); font-size: 12px; }
 td.age .fresh-flag { color: var(--ink); font-size: 12px; font-weight: 500; }
+
+/* ---------- ATS grouped view ---------- */
+tr.grp td { background: var(--surface); border-top: 1px solid var(--line-strong);
+            padding: 9px 10px; cursor: pointer; }
+tr.grp .grp-caret { color: var(--muted); font-size: 11px; }
+tr.grp .grp-name { color: var(--ink); font-weight: 600; }
+tr.grp:hover .grp-name { text-decoration: underline; }
 
 /* notes inline input — edit in place, save on change */
 .note-input { width: 150px; background: transparent;

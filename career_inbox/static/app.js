@@ -34,6 +34,8 @@ const FUNNEL = [
 const S = {
   rows: [],            // rows for the current status filter (server-fetched)
   page: "inbox",       // "inbox" | "ats" — hard partition by source (never mixed)
+  grouped: true,       // ATS page: fold roles under their company (default on)
+  folded: new Set(),   // collapsed company keys (session-local, not in hash)
   meta: null,          // /api/meta payload
   filters: { s: "live", q: "", pri: "all", fam: "all", stg: "all",
              mode: "all", src: "all" },
@@ -115,6 +117,7 @@ function syncHash() {
   const p = new URLSearchParams();
   p.set("s", f.s);
   if (S.page !== "inbox") p.set("page", S.page);
+  if (!S.grouped) p.set("flat", "1");
   if (f.q) p.set("q", f.q);
   for (const k of ["pri", "fam", "stg", "mode", "src"])
     if (f[k] !== "all") p.set(k, f[k]);
@@ -129,6 +132,7 @@ function readHash() {
   const f = S.filters;
   if (p.has("s")) f.s = p.get("s");
   S.page = p.get("page") === "ats" ? "ats" : "inbox";
+  S.grouped = p.get("flat") !== "1";
   f.q = p.get("q") || "";
   for (const k of ["pri", "fam", "stg", "mode", "src"])
     f[k] = p.get(k) || "all";
@@ -471,7 +475,50 @@ function render() {
   grid.style.display = "";
   empty.hidden = true;
 
-  for (const r of rows) {
+  if (S.page === "ats" && S.grouped) {
+    // board view: one header per company, roles beneath, click to fold
+    const groups = new Map();
+    for (const r of rows) {
+      const k = coKey(r.company);
+      if (!groups.has(k)) groups.set(k, []);
+      groups.get(k).push(r);
+    }
+    for (const [k, members] of groups) {
+      tbody.appendChild(groupHeaderRow(k, members));
+      if (!S.folded.has(k)) for (const r of members) tbody.appendChild(buildRow(r));
+    }
+  } else {
+    for (const r of rows) tbody.appendChild(buildRow(r));
+  }
+  updateSelectAll();
+  updateBulkBar();
+}
+
+function groupHeaderRow(k, members) {
+  const tr = document.createElement("tr");
+  tr.className = "grp";
+  const td = document.createElement("td");
+  td.colSpan = COLS.length;
+  const folded = S.folded.has(k);
+  const caret = document.createElement("span");
+  caret.className = "grp-caret"; caret.textContent = folded ? "▸ " : "▾ ";
+  const name = document.createElement("span");
+  name.className = "grp-name"; name.textContent = members[0].company;
+  const fresh = members.filter(isFresh).length;
+  const sub = document.createElement("span");
+  sub.className = "sub";
+  sub.textContent = `  ·  ${members.length} role${members.length === 1 ? "" : "s"}` +
+                    (fresh ? `  ·  ${fresh} today` : "");
+  td.append(caret, name, sub);
+  tr.appendChild(td);
+  tr.addEventListener("click", () => {
+    if (S.folded.has(k)) S.folded.delete(k); else S.folded.add(k);
+    render();
+  });
+  return tr;
+}
+
+function buildRow(r) {
     const tr = document.createElement("tr");
     tr.dataset.id = r.id;
     if (r.id === S.detailId) tr.classList.add("open");
@@ -542,10 +589,7 @@ function render() {
     tr.appendChild(noteTd);
 
     tr.appendChild(actionsCell(r));
-    tbody.appendChild(tr);
-  }
-  updateSelectAll();
-  updateBulkBar();
+    return tr;
 }
 
 /* ---------------- row actions ---------------- */
@@ -884,7 +928,18 @@ function applyPageChrome() {
   $("pageAts").classList.toggle("on", ats);
   document.body.classList.toggle("ats-page", ats);
   $("pagebar").hidden = !ats;
+  $("groupSeg").hidden = !ats;
+  $("grpOn").classList.toggle("on", S.grouped);
+  $("grpOff").classList.toggle("on", !S.grouped);
   document.title = ats ? "Intern Inbox — ATS boards" : "Intern Inbox";
+}
+
+function setGrouped(g) {
+  if (S.grouped === g) return;
+  S.grouped = g;
+  applyPageChrome();
+  syncHash();
+  render();
 }
 
 function setPage(page) {
@@ -1237,6 +1292,8 @@ function wire() {
 
   $("pageInbox").addEventListener("click", () => setPage("inbox"));
   $("pageAts").addEventListener("click", () => setPage("ats"));
+  $("grpOn").addEventListener("click", () => setGrouped(true));
+  $("grpOff").addEventListener("click", () => setGrouped(false));
   $("viewTable").addEventListener("click", () => setView("table"));
   $("viewMap").addEventListener("click", () => setView("map"));
   $("mapToggle").addEventListener("click", toggleStrip);
