@@ -91,8 +91,10 @@ Adding it turns on the **Email ♥** button in the app (step 6); the automatic
 digests after each check also need `enabled = true` under `[email]` in
 `config/career.toml`.
 
-You can run `/setup` again any time to change your profile, roles, or email —
-it will ask what you want to update instead of starting over.
+You can run `/setup` again any time — it asks what you want to update instead
+of starting over. The most useful re-run: say **"update my resume"** after you
+revise it, and your profile keywords and rankings follow the new version (you
+see the before/after diff first). The resume file stays on your machine.
 
 ## 4. Gmail app password
 

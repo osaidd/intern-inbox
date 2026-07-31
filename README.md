@@ -122,6 +122,11 @@ folder in Claude Code and use:
 - **/add-opportunity** — paste any posting/URL/alert email to file it.
 - **/pipeline-review** — triage by talking: "kill 12", "applied to Ramp".
 
+Got a new resume? Open the folder in Claude Code and say **"update my
+resume"** — it shows you how your keywords and rankings will change before
+writing anything. The resume file itself is gitignored: it is read locally and
+never leaves your machine.
+
 ## Suggest a board without a PR
 
 Found a company on Ashby or Greenhouse? Open a GitHub issue with the board

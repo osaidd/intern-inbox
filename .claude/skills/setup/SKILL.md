@@ -1,6 +1,6 @@
 ---
 name: setup
-description: First-run personalization for intern-inbox — interviews the user, ingests their resume, writes ALL personal config (career.toml, .env, profile.md), walks through Gmail app password + job-alert subscriptions, then smoke-tests a pull. Use when the user says /setup, "set me up", "get started", or when config/career.toml is missing. Re-runnable: with existing config it switches to update-my-profile mode.
+description: First-run personalization for intern-inbox — interviews the user, ingests their resume, writes ALL personal config (career.toml, .env, profile.md), walks through Gmail app password + job-alert subscriptions, then smoke-tests a pull. Use when the user says /setup, "set me up", "get started", "update my resume", "new resume", "update my profile", or when config/career.toml is missing. Re-runnable: with existing config it switches to update mode.
 ---
 
 # setup
@@ -9,10 +9,20 @@ Everything you write goes in GITIGNORED files: `config/career.toml`,
 `config/sources.local.toml`, `config/.env`, `profile/profile.md`. NEVER write
 personal values into tracked files. Record start time (run_log needs it).
 
-If `config/career.toml` exists, say so and ask what to update (profile / roles /
+If `config/career.toml` exists, say so and ask what to update (resume / roles /
 email / boards) — do only that section, then re-run step 6, then step 7 (the
 run_log write is non-optional even for a partial update — name the updated
 section(s) in the summary, e.g. "updated: roles").
+
+**Resume update** (the most common re-run — "new resume", "update my resume"):
+ask for the new PDF (dropped into the folder) or pasted text, re-derive the
+profile keywords / target titles / background summary per step 2, then SHOW THE
+DIFF before writing: current vs new keyword and title lists, side by side, so
+the user sees exactly how their ranking will change. On approval, rewrite
+`profile/profile.md` and BOTH `[role]` and `[scoring]` blocks (step 4's
+keep-in-sync rule applies), remind them the resume file itself is gitignored
+and never leaves the machine, then step 6 + step 7 ("updated: resume").
+Suggest `/skills-gap` afterwards — the market report reads the new profile.
 
 ## Flow
 0. **Environment check — before the interview, silently:** confirm this folder
