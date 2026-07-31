@@ -36,7 +36,7 @@ def client(tmp_path, monkeypatch):
                                     "role": "Ops Intern", "dedupe_hash": "h2",
                                     "status": "dead"})
     from career_inbox.web import app
-    return TestClient(app)
+    return TestClient(app, base_url="http://127.0.0.1")
 
 
 def test_jobs_default_live_excludes_dead(client):
@@ -102,4 +102,4 @@ def test_email_saved_409_when_empty(client, monkeypatch):
     client.post("/api/jobs/bulk",
                 json={"ids": [x["id"] for x in client.get("/api/jobs").json()["jobs"]],
                       "action": "kill"})
-    assert client.post("/api/email-saved").status_code == 409
+    assert client.post("/api/email-saved", json={}).status_code == 409

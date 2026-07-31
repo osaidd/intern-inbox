@@ -40,6 +40,8 @@ def _iso_date(ts) -> str | None:
 
 
 def parse_ashby(data: dict, org: str, cfg: Config) -> list:
+    if "jobs" not in data:
+        raise ValueError("no 'jobs' key — API shape changed?")
     jobs = []
     for e in data.get("jobs") or []:
         if not e.get("isListed", True):
@@ -66,6 +68,8 @@ def parse_ashby(data: dict, org: str, cfg: Config) -> list:
 
 
 def parse_greenhouse(data: dict, org: str, cfg: Config) -> list:
+    if "jobs" not in data:
+        raise ValueError("no 'jobs' key — API shape changed?")
     jobs = []
     for e in data.get("jobs") or []:
         cands = ([(e.get("location") or {}).get("name")]

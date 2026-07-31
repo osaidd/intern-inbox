@@ -57,7 +57,7 @@ Prefer doing the steps by hand? Install [uv](https://docs.astral.sh/uv/) first
 
 | Source | What you get |
 |---|---|
-| Ashby + Greenhouse posting APIs | 65 NYC company job boards, shared by the whole cohort, swept once a day |
+| Ashby + Greenhouse posting APIs | The cohort's shared NYC company job boards, swept once a day |
 | Your job-alert emails | LinkedIn, Built In, and Wellfound alerts, read from your Gmail inbox |
 | SimplifyJobs GitHub lists | The big public internship lists |
 | Indeed + Google, via JobSpy | Broader board search on your target titles |
@@ -68,18 +68,18 @@ actually works and most rows need no second tab.
 
 ## Privacy
 
-Everything stays on your machine.
+Your data stays on your machine: the database is a local SQLite file, the app
+runs on localhost, there are no accounts and no analytics.
 
-- The database is a single SQLite file in `data/`. The app is a web page served
-  from your own laptop at `127.0.0.1:8477`.
-- No telemetry, no analytics, no account to create, no server to sign in to.
-- Your resume, your profile, and your config are gitignored. They cannot be
-  committed by accident.
-- LinkedIn is never scraped. LinkedIn postings only arrive through the alert
-  emails you subscribe to yourself.
-- The board APIs are public and keyless. Requests go out one at a time, about a
-  second apart, with an honest user agent that names the project and your own
-  contact address.
+To be precise about what does leave your machine: the feeds call the public
+Ashby/Greenhouse/SimplifyJobs/Indeed APIs to fetch listings (board requests
+carry your contact email in an honest user-agent so employers can reach you
+about traffic — posting-page fetches use a neutral one); company logos load
+from Google's favicon service and the map (once offices are geocoded) loads
+OpenStreetMap tiles, so those services see ordinary page-load requests. Your
+resume, profile, config, and pipeline never leave your machine. Resume files
+(`*.pdf`, `*.docx`) are gitignored so `git add -A` can never stage them.
+
 
 ## Contributing a board
 
@@ -108,6 +108,25 @@ config, resume, or email in a pull request.
 `~/Applications` that starts the server and opens the inbox in one click. Pass
 `--dock` to pin it. You never need it — `uv run intern-inbox` does the same
 thing from a terminal.
+
+## After a week of data
+
+The daily list is half the product. Once your database has real rows, open the
+folder in Claude Code and use:
+
+- **/opportunity-scan** — full sourcing sweep + company enrichment (stage,
+  size, office) that upgrades row priorities from "medium/low" to real tiers.
+  Run this early: it is what makes the priority column meaningful.
+- **/skills-gap** — reads every stored JD against your profile: what the
+  market demands, where you fall short, and per-role fit briefs.
+- **/add-opportunity** — paste any posting/URL/alert email to file it.
+- **/pipeline-review** — triage by talking: "kill 12", "applied to Ramp".
+
+## Suggest a board without a PR
+
+Found a company on Ashby or Greenhouse? Open a GitHub issue with the board
+URL (there's a template) — no fork needed; a maintainer adds the slug and the
+whole cohort gets it on the next `git pull`.
 
 ## License
 

@@ -1,0 +1,19 @@
+name: Add a job board
+description: Suggest a company's Ashby or Greenhouse board for the shared list
+title: "Add board: <company>"
+labels: [board]
+body:
+  - type: input
+    id: url
+    attributes:
+      label: Board URL
+      description: e.g. https://jobs.ashbyhq.com/company or https://boards.greenhouse.io/company
+      placeholder: https://jobs.ashbyhq.com/…
+    validations:
+      required: true
+  - type: input
+    id: company
+    attributes:
+      label: Company name
+    validations:
+      required: true

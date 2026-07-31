@@ -116,7 +116,11 @@ def main(dry_run: bool = False, trigger: str = "manual"):
         return stats
     try:
         imap = imaplib.IMAP4_SSL("imap.gmail.com")
-        imap.login(user, password)
+        try:
+            imap.login(user, password)
+        except Exception:
+            imap.logout()
+            raise
         fetched = {}
         try:
             for name, sender, _, _ in sources:      # one session, per-sender search

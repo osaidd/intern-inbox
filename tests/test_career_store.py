@@ -41,11 +41,11 @@ def test_company_upsert_dedupes(tmp_path, monkeypatch):
 def test_insert_new_dup_excluded(tmp_path, monkeypatch):
     conn = _db(tmp_path, monkeypatch)
     outcome, pri = insert_job(conn, _job(), CFG)
-    assert outcome == "new" and pri == "low"      # company unenriched → low
+    assert outcome == "new" and pri == "medium"   # unenriched + strong role → medium
     assert insert_job(conn, _job(), CFG) == ("dup", None)
     assert insert_job(conn, _job(location="Remote", url="https://x.co/2"), CFG) == ("excluded", None)
     row = conn.execute("SELECT * FROM opportunities").fetchone()
-    assert row["priority"] == "low" and row["company_id"] is not None
+    assert row["priority"] == "medium" and row["company_id"] is not None
     assert row["work_mode"] in ("onsite", "hybrid", "unknown")
     conn.close()
 

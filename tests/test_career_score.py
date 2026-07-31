@@ -86,9 +86,13 @@ def test_one_downgrade_is_medium():
     assert priority(weak_role, T1, CFG) == "medium"                          # moderate role
 
 
-def test_unknown_company_is_low_until_enriched():
-    assert priority(_job(), None, CFG) == "low"
-    assert priority(_job(), {"stage": None, "headcount": None}, CFG) == "low"
+def test_unknown_company_ranks_by_role_strength():
+    """Unenriched companies: strong roles rank medium (day-one inboxes must not
+    be a flat wall of 'low'); 'high' stays reserved for confirmed tier1."""
+    assert priority(_job(), None, CFG) == "medium"          # target-title role
+    assert priority(_job(), {"stage": None, "headcount": None}, CFG) == "medium"
+    weak = _job(role="Ops Intern", jd_text="Keep the office running with data entry.")
+    assert priority(weak, None, CFG) == "low"               # strength 1 stays low
 
 
 def test_two_downgrades_low_and_dead_gate():

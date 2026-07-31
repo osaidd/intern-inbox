@@ -70,7 +70,7 @@ Two things that trip people up:
   that cannot reach the job-board APIs — the pull will fail there with
   "host not allowed" errors that have nothing to do with your setup.
 
-Claude Code will:
+Claude Code will (it also shows you the default company filters — big-tech names are excluded out of the box unless you say otherwise):
 
 1. **Ask a few questions** — the kinds of roles you want, what you are good at,
    any dealbreakers, dream companies, and the email address where you want job

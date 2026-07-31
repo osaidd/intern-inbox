@@ -132,8 +132,13 @@ def priority(job: Job, company, cfg: Config) -> str:
     if ct == "dead":
         return "dead"
     strength = role_strength(job.role, job.jd_text, cfg)
-    if ct == "unknown" or strength == 0:
+    if strength == 0:
         return "low"
+    if ct == "unknown":
+        # company not yet enriched: differentiate by role strength so day-one
+        # inboxes aren't a flat wall of 'low' — 'high' stays reserved for
+        # confirmed tier1 companies
+        return "medium" if strength == 2 else "low"
     downgrades = ((ct == "tier2") + (location_tier(job.area or job.location, cfg) == 2)
                   + (strength == 1))
     return "high" if downgrades == 0 else "medium" if downgrades == 1 else "low"

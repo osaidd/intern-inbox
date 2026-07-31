@@ -47,4 +47,4 @@ def fetch(cfg: Config) -> list:
             errors.append(f"{url}: {e}")
     if errors and not jobs:
         raise RuntimeError("; ".join(errors))
-    return jobs
+    return jobs, errors

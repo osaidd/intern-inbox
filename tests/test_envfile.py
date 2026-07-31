@@ -1,7 +1,16 @@
 """config/.env parsing: the only secrets path the feeds use."""
 import os
 
+import pytest
+
 from feeds import envfile
+
+
+@pytest.fixture(autouse=True)
+def _isolated_environ(monkeypatch):
+    """load_env mutates os.environ via setdefault; restore it wholesale so
+    CAREER_* values can never leak into later tests."""
+    monkeypatch.setattr(os, "environ", os.environ.copy())
 
 
 def _write_env(tmp_path, monkeypatch, body: str):

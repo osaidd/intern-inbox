@@ -61,20 +61,29 @@ def test_hydrates_scores_and_stamps(tmp_path, monkeypatch):
     conn.close()
 
 
-def test_outbound_fetch_sends_the_config_user_agent(tmp_path, monkeypatch):
-    """The UA is built from the running user's own config — never a hardcoded
-    personal contact address baked into the source."""
-    db = _db(tmp_path, monkeypatch)
-    db.insert("opportunities", _row("h1"))
+def test_outbound_fetch_sends_a_neutral_user_agent(monkeypatch, tmp_path):
+    """jd_hydrate fetches ARBITRARY posting hosts, so the UA must NOT carry the
+    user's contact address (that stays reserved for the known board APIs)."""
     seen = {}
 
-    def capturing_opener(req, timeout):
-        seen["ua"] = req.get_header("User-agent")
-        return fake_opener(req, timeout)
+    class _Resp:
+        def __enter__(self):
+            return self
+        def __exit__(self, *a):
+            return False
+        def read(self):
+            return b"x" * 500
+        def geturl(self):
+            return "https://jobs.example.com/1"
 
-    jd_hydrate.main(_opener=capturing_opener, _sleep=lambda s: None)
-    assert seen["ua"] == user_agent(ch_config.load())["User-Agent"]
-    assert "@" not in jd_hydrate.DEFAULT_UA["User-Agent"]   # fallback carries no address
+    def opener(req, timeout=None):
+        seen["ua"] = req.headers.get("User-agent", "")
+        return _Resp()
+
+    from feeds.jd_hydrate import fetch_text
+    fetch_text("https://jobs.example.com/1", _opener=opener)
+    assert "@" not in seen["ua"]                 # no email to arbitrary hosts
+    assert "fetcher" in seen["ua"] or "intern-inbox" in seen["ua"]
 
 
 def test_dead_page_stamps_without_text(tmp_path, monkeypatch):

@@ -29,6 +29,11 @@ section(s) in the summary, e.g. "updated: roles").
      data · ops/BizOps · other)
    - Strengths and standout skills (free text)
    - Dealbreakers (e.g. no crypto, no on-site-5-days, company types to avoid)
+   - **Show the starter blocklist and ask.** `config/career.example.toml`
+     ships an opinionated mega-corp blocklist (Google, Bloomberg, Jane Street,
+     OpenAI, …) and `allow_remote = false`. Summarize both and ask: keep the
+     startup-only filter, or clear/trim it? Many students WANT the big-name
+     internships — never silently hide them. Write whatever they choose.
    - Dream companies (seed `config/sources.local.toml` with their Ashby/Greenhouse
      org slugs under `[ats]` if known, or add them to the `[role]`/`[scoring]`
      blocklist adjustments) — `feeds/config_load.py` merges this gitignored file

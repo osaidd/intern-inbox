@@ -196,7 +196,7 @@ def test_main_inserts_with_priority(tmp_path, monkeypatch):
     rows = conn.execute("SELECT company, priority, company_id FROM opportunities").fetchall()
     conn.close()
     assert len(rows) == 1 and rows[0]["company"] == "Solva"
-    assert rows[0]["priority"] == "low" and rows[0]["company_id"] is not None
+    assert rows[0]["priority"] == "medium" and rows[0]["company_id"] is not None
 
 
 def test_main_excludes_big_companies_and_red_flag_jds(inbox_db, monkeypatch, capsys):

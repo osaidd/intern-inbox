@@ -15,6 +15,7 @@ LOGS="$HOME/.intern-inbox/logs"
 mkdir -p "$LOGS"
 if ! lsof -iTCP:$PORT -sTCP:LISTEN >/dev/null 2>&1; then
   cd "$REPO" || exit 1
+  "$UV" sync -q 2>/dev/null || true   # deps follow git pull; never block launch
   nohup "$UV" run intern-inbox \
     >> "$LOGS/intern-inbox-$(date +%Y-%m-%d).log" 2>&1 &
   for _ in {1..40}; do

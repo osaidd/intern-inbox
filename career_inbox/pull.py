@@ -49,6 +49,11 @@ def write_stamp() -> None:
 
 
 def _linkedin():
+    import os
+    from feeds.envfile import load_env
+    load_env()
+    if not os.environ.get("CAREER_IMAP_PASS"):
+        return None, "not configured (no Gmail app password — see SETUP.md)"
     from feeds.linkedin_mail_pull import main
     return main(trigger="scheduled")  # feeds share run_log's trigger enum
 
@@ -63,7 +68,7 @@ def _jobspy():
         return None  # skipped
     try:
         from feeds.jobspy_pull import main
-        main()
+        main(trigger="scheduled")
         return {"ran": True}
     finally:
         write_stamp()  # even on failure: one attempt per day
@@ -105,8 +110,8 @@ def _geocode_batch():
             if hit:
                 conn.execute("UPDATE companies SET lat=?, lon=? WHERE id=?",
                              (hit[0], hit[1], r["id"]))
+                conn.commit()   # per hit — never hold a write txn across a geocode call
                 done += 1
-        conn.commit()
     finally:
         conn.close()
     return {"geocoded": done, "candidates": len(rows)}
@@ -124,7 +129,9 @@ def full_check(trigger: str = "manual") -> dict:
         for name, fn in CONNECTORS:
             try:
                 stats = fn()
-                if stats is None:
+                if isinstance(stats, tuple) and stats[0] is None:
+                    STATE["steps"][name] = stats[1]      # e.g. mail not configured
+                elif stats is None:
                     STATE["steps"][name] = "skipped (daily budget)"
                 else:
                     STATE["steps"][name] = f"ok:{stats.get('new', '?')}new"

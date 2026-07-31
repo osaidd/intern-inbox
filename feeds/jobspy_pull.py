@@ -88,7 +88,7 @@ def fetch_jobs(cfg: dict) -> list:
     return jobs
 
 
-def main(dry_run: bool = False):
+def main(dry_run: bool = False, trigger: str = "manual"):
     started = datetime.now().isoformat(timespec="seconds")
     cfg = load_config()
     found = new = skipped = excluded = malformed = 0
@@ -125,7 +125,7 @@ def main(dry_run: bool = False):
             conn.close()
     except Exception as e:
         if not dry_run:
-            db.log_run(skill="jobspy-pull", trigger="manual", status="error",
+            db.log_run(skill="jobspy-pull", trigger=trigger, status="error",
                        summary=f"{type(e).__name__}: {e}"[:200],
                        started_at=started,
                        finished_at=datetime.now().isoformat(timespec="seconds"),
@@ -135,7 +135,7 @@ def main(dry_run: bool = False):
         raise
     summary = f"{new} new / {found} found"
     if not dry_run:
-        db.log_run(skill="jobspy-pull", trigger="manual", status="ok", summary=summary,
+        db.log_run(skill="jobspy-pull", trigger=trigger, status="ok", summary=summary,
                    started_at=started, finished_at=datetime.now().isoformat(timespec="seconds"),
                    metrics_json=json.dumps({"found": found, "new": new,
                                             "skipped_existing": skipped,

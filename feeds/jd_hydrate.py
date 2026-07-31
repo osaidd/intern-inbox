@@ -12,6 +12,7 @@ recompute_priorities), run_log."""
 import json
 import sys
 import time
+import urllib.error
 import urllib.request
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -34,13 +35,23 @@ MIN_TEXT = 400
 SLEEP = 1.5
 
 
+class NetworkDown(Exception):
+    """Transient network failure — retry later without consuming the stamp."""
+
+
 def fetch_text(url: str, _opener=None, ua: dict | None = None) -> str | None:
     """Fetch a posting page and return readable text, or None (best-effort)."""
     opener = _opener or urllib.request.urlopen
     req = urllib.request.Request(url, headers=ua or DEFAULT_UA)
     try:
         with opener(req, timeout=15) as resp:
+            if "linkedin.com" in (getattr(resp, "geturl", lambda: "")() or ""):
+                return None      # a redirect landed on linkedin — the red line holds
             html = resp.read().decode("utf-8", errors="replace")
+    except urllib.error.URLError as e:
+        if isinstance(e, urllib.error.HTTPError):
+            return None          # dead posting page — normal, stampable
+        raise NetworkDown        # DNS/socket trouble — caller must NOT burn the stamp
     except Exception:  # noqa: BLE001 — a dead posting page is normal, not fatal
         return None
     text = extract_text(html)
@@ -65,7 +76,9 @@ def main(dry_run: bool = False, cap: int = CAP, trigger: str = "manual",
     started = datetime.now().isoformat(timespec="seconds")
     legacy_cfg = load_legacy_config()
     cfg = ch_config.load()
-    ua = user_agent(cfg)
+    # arbitrary third-party posting hosts get a neutral UA — the contact address
+    # is reserved for the known board APIs and Nominatim
+    ua = DEFAULT_UA
     stats = {"tried": 0, "hydrated": 0, "thin_or_dead": 0, "rescored": 0}
     conn = db.connect()
     try:
@@ -75,19 +88,25 @@ def main(dry_run: bool = False, cap: int = CAP, trigger: str = "manual",
             if i:
                 _sleep(SLEEP)
             stats["tried"] += 1
-            text = fetch_text(r["url"], _opener=_opener, ua=ua)
+            try:
+                text = fetch_text(r["url"], _opener=_opener, ua=ua)
+            except NetworkDown:
+                stats["network_down"] = stats.get("network_down", 0) + 1
+                continue     # wifi blip must not burn the 7-day retry window
             if dry_run:
                 continue
             today = date.today().isoformat()
             if text is None:
                 conn.execute("UPDATE opportunities SET jd_fetched_at=? WHERE id=?",
                              (today, r["id"]))
+                conn.commit()    # commit per row — never hold a write txn across a fetch
                 stats["thin_or_dead"] += 1
                 continue
             s = score_job(r["role"], text, r["posted_date"], legacy_cfg)
             conn.execute(
                 "UPDATE opportunities SET jd_text=?, jd_fetched_at=?, score=? WHERE id=?",
                 (text[:20000], today, s, r["id"]))
+            conn.commit()        # commit per row — never hold a write txn across a fetch
             stats["hydrated"] += 1
             if s is not None:
                 stats["rescored"] += 1

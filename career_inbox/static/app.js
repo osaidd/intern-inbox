@@ -10,7 +10,13 @@
 "use strict";
 
 const $ = (id) => document.getElementById(id);
-const TODAY = new Date().toISOString().slice(0, 10);
+/* live LOCAL date — computed per call, never frozen at page load and never UTC:
+   a tab left open across midnight (or an evening session east of UTC) must not
+   mislabel the rows a sweep just found */
+function localToday() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
 
 /* status filter option → API `statuses` param value */
 const STATUS_OPTS = [
@@ -38,7 +44,7 @@ const S = {
   folded: new Set(),   // collapsed company keys (session-local, not in hash)
   meta: null,          // /api/meta payload
   filters: { s: "live", q: "", pri: "all", fam: "all", stg: "all",
-             mode: "all", src: "all" },
+             mode: "all", src: "all", term: "all" },
   sort: { key: "priority", dir: "asc" },   // default: priority rank, score desc
   view: "table",
   stripOpen: true,     // map strip expanded (table view); collapsed state in hash
@@ -70,19 +76,19 @@ const pageMatch = (r) => (S.page === "ats") === ATS_SOURCES.has(r.source);
 function ageDays(r) {
   const d = r.posted_date || r.discovered_date;
   if (!d) return null;
-  const ms = Date.parse(TODAY) - Date.parse(d);
+  const ms = Date.parse(localToday()) - Date.parse(d);
   return Number.isFinite(ms) ? Math.max(0, Math.round(ms / 86400000)) : null;
 }
 function staleDays(r) {
   const basis = r.last_seen || r.discovered_date;
   if (!basis) return null;
-  const ms = Date.parse(TODAY) - Date.parse(basis);
+  const ms = Date.parse(localToday()) - Date.parse(basis);
   return Number.isFinite(ms) ? Math.round(ms / 86400000) : null;
 }
 const modeLabel = (r) =>
   (!r.work_mode || r.work_mode === "unknown") ? "" : r.work_mode;
 /* first seen in today's sweep — the delta is what matters on board data */
-const isFresh = (r) => r.discovered_date === TODAY;
+const isFresh = (r) => r.discovered_date === localToday();
 const isHttps = (u) => typeof u === "string" && /^https:\/\//i.test(u);
 
 /* true if `status` still belongs in the active status filter (drives optimistic
@@ -106,6 +112,7 @@ async function postJSON(url, body) {
 /* merge a write response into the loaded row (company-join + computed fields are
    absent from the opportunities SELECT * and so survive the merge) */
 function patchRow(id, patch) {
+  if (patch) delete patch.jd_text;   // list rows never carry the full JD
   const row = S.rows.find((x) => x.id === id);
   if (row) Object.assign(row, patch);
   return row;
@@ -119,7 +126,7 @@ function syncHash() {
   if (S.page !== "inbox") p.set("page", S.page);
   if (!S.grouped) p.set("flat", "1");
   if (f.q) p.set("q", f.q);
-  for (const k of ["pri", "fam", "stg", "mode", "src"])
+  for (const k of ["pri", "fam", "stg", "mode", "src", "term"])
     if (f[k] !== "all") p.set(k, f[k]);
   p.set("sort", `${S.sort.key}:${S.sort.dir}`);
   p.set("view", S.view);
@@ -130,11 +137,11 @@ function syncHash() {
 function readHash() {
   const p = new URLSearchParams(location.hash.replace(/^#/, ""));
   const f = S.filters;
-  if (p.has("s")) f.s = p.get("s");
+  if (p.has("s") && STATUS_OPTS.some(([v]) => v === p.get("s"))) f.s = p.get("s");
   S.page = p.get("page") === "ats" ? "ats" : "inbox";
   S.grouped = p.get("flat") !== "1";
   f.q = p.get("q") || "";
-  for (const k of ["pri", "fam", "stg", "mode", "src"])
+  for (const k of ["pri", "fam", "stg", "mode", "src", "term"])
     f[k] = p.get(k) || "all";
   const sort = p.get("sort");
   if (sort && sort.includes(":")) {
@@ -162,8 +169,10 @@ async function load() {
     const r = await fetch(`/api/jobs?statuses=${encodeURIComponent(S.filters.s)}`);
     const d = await r.json();
     S.rows = d.jobs || [];
+    S.loadError = false;
   } catch {
     S.rows = [];
+    S.loadError = true;
   }
   buildFilterOptions();
   render();
@@ -200,12 +209,14 @@ function buildFilterOptions() {
   const stages = new Set(meta.stages || []);
   const sources = new Set((meta.sources || []).filter(onPage));
   const modes = new Set();
+  const terms = new Set();
   for (const r of S.rows.filter(pageMatch)) {
     if (r.family) fams.add(r.family);
     if (r.stage) stages.add(r.stage);
     if (r.source) sources.add(r.source);
     const m = modeLabel(r);
     if (m) modes.add(m);
+    if (r.term) terms.add(r.term);
   }
   const pairs = (set) => [...set].sort().map((v) => [v, v]);
 
@@ -216,6 +227,7 @@ function buildFilterOptions() {
   fillSelect($("fStage"), pairs(stages), S.filters.stg, "All stage");
   fillSelect($("fMode"), pairs(modes), S.filters.mode, "All mode");
   fillSelect($("fSrc"), pairs(sources), S.filters.src, "All source");
+  fillSelect($("fTerm"), pairs(terms), S.filters.term, "All terms");
 }
 
 /* ---------------- filter + sort pipeline ---------------- */
@@ -230,6 +242,7 @@ function applyFilters() {
     if (f.stg !== "all" && r.stage !== f.stg) return false;
     if (f.mode !== "all" && modeLabel(r) !== f.mode) return false;
     if (f.src !== "all" && r.source !== f.src) return false;
+    if (f.term !== "all" && r.term !== f.term) return false;
     if (q) {
       const hay = norm(r.company) + " " + norm(r.role) + " " + norm(r.notes) +
                   " " + norm(r.location) + " " + norm(r.source);
@@ -283,7 +296,8 @@ const COLS = [
   { key: "family", label: "Family", sortable: true },
   { key: "term", label: "Term", sortable: true },
   { key: "work_mode", label: "Mode", sortable: true },
-  { key: "score", label: "Fit", sortable: true, cls: "r" },
+  { key: "score", label: "Fit", sortable: true, cls: "r",
+    tip: "Keyword fit vs your profile, 0\u20131 \u2014 a rough ranking aid, not a match probability" },
   { key: "salary_text", label: "Comp", sortable: false },
   { key: "age", label: "Age", sortable: true, cls: "r" },
   { key: "source", label: "Source", sortable: true },
@@ -306,6 +320,7 @@ function renderHead() {
       tr.appendChild(th);
       continue;
     }
+    if (c.tip) th.title = c.tip;
     if (c.sortable) {
       th.classList.add("sortable");
       const on = S.sort.key === c.key;
@@ -333,7 +348,7 @@ function priCell(r) {
   span.className = `dot pri-${pri in PRI_RANK ? pri : "low"}`;
   span.textContent = r.priority || "—";
   td.appendChild(span);
-  if (r.discovered_date === TODAY) {
+  if (r.discovered_date === localToday()) {
     const tag = document.createElement("span");
     tag.className = "tag-new";
     tag.textContent = "new";
@@ -446,7 +461,9 @@ function render() {
     grid.style.display = "none";
     empty.hidden = false;
     empty.innerHTML = "";
-    if (S.rows.length === 0) {
+    if (S.loadError) {
+      empty.textContent = "Can't reach the app server — is it still running? Check the terminal.";
+    } else if (S.rows.length === 0) {
       empty.textContent = "Pipeline empty — hit Check now.";
     } else if (pageRows.length === 0) {
       empty.textContent = S.page === "ats"
@@ -520,7 +537,12 @@ function groupHeaderRow(k, members) {
   td.appendChild(wrap);
   tr.appendChild(td);
   tr.addEventListener("click", () => {
-    if (S.folded.has(k)) S.folded.delete(k); else S.folded.add(k);
+    if (S.folded.has(k)) {
+      S.folded.delete(k);
+    } else {
+      S.folded.add(k);
+      members.forEach((r) => S.sel.delete(r.id));  // never keep invisible selections
+    }
     render();
   });
   return tr;
@@ -644,6 +666,7 @@ async function applyStatus(id, next) {
     patchRow(id, resp);
     if (S.detailId === id) { Object.assign(S.detailJob, resp); renderDetail(); }
     render();
+    loadMeta();               // header counts track the change immediately
   } catch (e) { console.error("status change failed", e); }
 }
 function toggleHeart(id) {
@@ -701,6 +724,7 @@ async function runBulk(action) {
   } catch (e) { console.error("bulk failed", e); return; }
   S.sel.clear();
   await load();            // bulk refetches (per spec)
+  loadMeta();
 }
 function clearSelection() { S.sel.clear(); render(); }
 
@@ -721,9 +745,12 @@ function renderCounts() {
     renderPagebar(a, orgs);
   } else {
     const c = m.counts || {};
+    const since = localStorage.getItem("inbox-last-visit");
+    const fresh = since ? S.rows.filter((r) => (r.discovered_date || "") > since).length : 0;
     el.innerHTML =
       `<b>${c.live ?? 0}</b> live · <b>${c.high ?? 0}</b> high · ` +
-      `<b>${c.medium ?? 0}</b> med · <b>${c.low ?? 0}</b> low · checked ${ago}`;
+      `<b>${c.medium ?? 0}</b> med · <b>${c.low ?? 0}</b> low · checked ${ago}` +
+      (fresh ? ` · <b>${fresh}</b> new since your last visit` : "");
   }
   if (S.page !== "ats" && lc && lc.summary) el.title = lc.summary;
   else el.title = "";
@@ -924,7 +951,7 @@ function toggleSort(key) {
 function clearFilters() {
   const f = S.filters;
   f.q = ""; f.pri = "all"; f.fam = "all"; f.stg = "all";
-  f.mode = "all"; f.src = "all";
+  f.mode = "all"; f.src = "all"; f.term = "all";
   $("search").value = "";
   buildFilterOptions();
   syncHash();
@@ -1018,6 +1045,11 @@ async function buildMap() {
   if (mapEl.hidden) { destroyMap(); return; }
 
   const offices = await ensureOffices();
+  if (!offices.length && !full) {   // nothing geocoded yet: no empty strip chrome
+    host.hidden = true;
+    destroyMap();
+    return;
+  }
   let list = offices;
   if (full) {
     // full map respects the active table filters (company-name match)
@@ -1114,9 +1146,7 @@ function flashRow(key) {
       tr.scrollIntoView({ behavior: "smooth", block: "center" });
       tr.classList.add("rowflash");
       setTimeout(() => tr.classList.remove("rowflash"), 1200);
-      const cb = tr.querySelector('input[type="checkbox"]');
-      if (cb && !cb.checked) { cb.checked = true; toggleSelect(r.id, true); }
-      return;
+      return;   // navigate + flash only — selection is the user's gesture
     }
   }
 }
@@ -1138,7 +1168,7 @@ function exportCsv() {
   const blob = new Blob([lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = url; a.download = `jobs-${TODAY}.csv`;
+  a.href = url; a.download = `jobs-${localToday()}.csv`;
   document.body.appendChild(a); a.click(); a.remove();
   URL.revokeObjectURL(url);
 }
@@ -1290,7 +1320,7 @@ function wire() {
     load();               // status filter refetches from the server
   });
   const clientSelect = { fPri: "pri", fFam: "fam", fStage: "stg",
-                         fMode: "mode", fSrc: "src" };
+                         fMode: "mode", fSrc: "src", fTerm: "term" };
   for (const [id, key] of Object.entries(clientSelect)) {
     $(id).addEventListener("change", (e) => {
       S.filters[key] = e.target.value;
@@ -1340,6 +1370,8 @@ async function boot() {
   if (S.detailId != null) await openDetail(S.detailId);  // restore open panel
   startAutoRefresh();
   syncHash();             // normalize hash on first paint
+  // stamp AFTER first paint so "new since your last visit" described this visit
+  setTimeout(() => localStorage.setItem("inbox-last-visit", localToday()), 30000);
 }
 
 boot();

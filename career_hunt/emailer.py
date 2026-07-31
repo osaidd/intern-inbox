@@ -3,6 +3,7 @@
 import html
 import os
 import smtplib
+import ssl
 import sys
 from email.mime.text import MIMEText
 
@@ -37,7 +38,7 @@ def send(email_cfg: EmailConfig, subject: str, html_body: str, _smtp=None) -> No
     smtp_cls = _smtp or smtplib.SMTP
     try:
         with smtp_cls(email_cfg.smtp_host, email_cfg.smtp_port, timeout=30) as s:
-            s.starttls()
+            s.starttls(context=ssl.create_default_context())
             s.login(email_cfg.smtp_user, password)
             s.send_message(msg)
     except Exception as e:  # noqa: BLE001

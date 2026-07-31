@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -48,9 +48,12 @@ async def _lifespan(app: "FastAPI"):
     async def loop():
         while True:
             await asyncio.sleep(30 * 60)
-            if pull.STATE["running"] or _checked_recently(25):
-                continue
-            await asyncio.to_thread(pull.full_check, "auto")
+            try:
+                if pull.STATE["running"] or _checked_recently(25):
+                    continue
+                await asyncio.to_thread(pull.full_check, "auto")
+            except Exception:  # noqa: BLE001 — one bad check must not kill the loop
+                pass
     task = asyncio.create_task(loop())
     try:
         yield
@@ -59,6 +62,10 @@ async def _lifespan(app: "FastAPI"):
 
 
 app = FastAPI(title="career-inbox", lifespan=_lifespan)
+# localhost-only app: reject DNS-rebinding (foreign Host headers). The port is
+# not pinned so --port N keeps working.
+from starlette.middleware.trustedhost import TrustedHostMiddleware  # noqa: E402
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=["127.0.0.1", "localhost"])
 
 LIVE = ("new", "shortlisted", "applied", "interviewing")
 ALL_STATUSES = ("new", "shortlisted", "applied", "interviewing", "offer",
@@ -94,7 +101,8 @@ def jobs(statuses: str = "live"):
     conn = db.connect_ro()
     try:
         rows = _rows(conn,
-                     f"SELECT {JOB_COLS}, o.jd_text FROM opportunities o "
+                     f"SELECT {JOB_COLS}, substr(o.jd_text, 1, 2000) AS jd_text "
+                     "FROM opportunities o "
                      "LEFT JOIN companies c ON c.id = o.company_id "
                      f"WHERE o.status IN ({marks}) "
                      f"ORDER BY {PRIORITY_RANK}, o.score IS NULL, o.score DESC, "
@@ -246,7 +254,8 @@ def add_jobs(payload: list[dict]):
 
 
 @app.post("/api/email-saved")
-def email_saved():
+def email_saved(request: Request):
+    _require_json(request)
     load_env()
     conn = db.connect_ro()
     try:
@@ -270,10 +279,20 @@ def email_saved():
     return {"sent": len(rows)}
 
 
+def _require_json(request):
+    """Cross-site form POSTs can reach bodyless endpoints without a CORS
+    preflight; requiring a JSON content-type makes them same-origin-only."""
+    ct = request.headers.get("content-type", "")
+    if not ct.startswith("application/json"):
+        raise HTTPException(415, "expected application/json")
+
+
 @app.post("/api/pull")
-async def api_pull():
+async def api_pull(request: Request):
+    _require_json(request)
     if pull.STATE["running"]:
         raise HTTPException(409, "check already running")
+    pull.STATE["running"] = True     # set before the thread starts (double-POST race)
     asyncio.get_running_loop().run_in_executor(
         None, lambda: pull.full_check(trigger="button"))
     return {"started": datetime.now().isoformat(timespec="seconds")}

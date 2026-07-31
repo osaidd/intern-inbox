@@ -23,8 +23,8 @@ def main(dry_run: bool = False, trigger: str = "manual"):
              "high": 0, "medium": 0, "low": 0}
     new_rows = []
     try:
-        jobs = github_intern.fetch(cfg)
-        stats["found"] = len(jobs)
+        jobs, list_errors = github_intern.fetch(cfg)
+        stats["found"], stats["list_errors"] = len(jobs), len(list_errors)
         conn = db.connect()
         try:
             for j in jobs:
@@ -48,6 +48,7 @@ def main(dry_run: bool = False, trigger: str = "manual"):
     if not dry_run and new_rows:
         maybe_send_digest(cfg, new_rows, "github-intern-pull")
     summary = (f"found={stats['found']} new={stats['new']} dup={stats['dup']} "
+               f"list_errors={stats.get('list_errors', 0)} "
                f"excluded={stats['excluded']} high={stats['high']} "
                f"med={stats['medium']} low={stats['low']}")
     if not dry_run:

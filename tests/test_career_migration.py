@@ -37,17 +37,32 @@ def test_opportunities_new_columns_and_statuses(tmp_path, monkeypatch):
 
 
 def test_existing_rows_survive_rebuild(tmp_path, monkeypatch):
-    """003 rebuilds opportunities, so a full row must round-trip through the new schema.
-    Staging genuine pre-003 data (by pre-marking 003 as applied) is fragile, so this
-    applies every migration, inserts, and checks the row comes back intact."""
+    """The overhaul migration DROPs and rebuilds opportunities. Stage a genuinely
+    pre-rebuild row: apply only the early migrations, insert through the OLD
+    schema, then apply the rest and assert the row survived with new columns."""
+    import shutil
     monkeypatch.setattr(db, "DB_PATH", tmp_path / "life.db")
-    monkeypatch.setattr(db, "MIGRATIONS_DIR", db.MIGRATIONS_DIR)  # real dir
+    real_dir = db.MIGRATIONS_DIR
+    staged = tmp_path / "migrations"
+    staged.mkdir()
+    for name in ("001_runlog.sql", "002_career.sql",):
+        shutil.copy(real_dir / name, staged / name)
+    monkeypatch.setattr(db, "MIGRATIONS_DIR", staged)
+    db.migrate()                              # old schema only
+    conn = db.connect()
+    conn.execute("INSERT INTO opportunities (source, company, role, url, score, "
+                 "dedupe_hash, status) VALUES ('jobspy','Solva','AI Intern',"
+                 "'https://x.co/1',0.7,'hx','shortlisted')")
+    conn.commit()
+    conn.close()
+    for f in sorted(real_dir.glob("*.sql")):     # now the rest, incl. rebuild
+        if not (staged / f.name).exists():
+            shutil.copy(f, staged / f.name)
     db.migrate()
-    db.insert("opportunities", {"source": "jobspy", "company": "Solva", "role": "AI Intern",
-                                    "url": "https://x.co/1", "score": 0.7, "dedupe_hash": "hx",
-                                    "status": "shortlisted"})
     conn = db.connect()
     row = conn.execute("SELECT * FROM opportunities WHERE dedupe_hash='hx'").fetchone()
-    assert row["company"] == "Solva" and row["status"] == "shortlisted"
-    assert row["priority"] is None  # raw db.insert() bypasses insert_job(), which sets it
+    cols = {r["name"] for r in conn.execute("PRAGMA table_info(opportunities)")}
     conn.close()
+    assert row["company"] == "Solva" and row["status"] == "shortlisted"
+    assert row["score"] == 0.7                   # data round-tripped the rebuild
+    assert {"priority", "last_seen", "salary_text"} <= cols   # new columns arrived

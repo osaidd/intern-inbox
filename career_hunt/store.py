@@ -70,6 +70,9 @@ def insert_job(conn, job: Job, cfg: Config, dry_run: bool = False):
         "dedupe_hash": h, "priority": stored_pri, "company_id": cid,
         "work_mode": detect_work_mode(job.location, job.jd_text),
         "office_area": job.area, "status": status,
+        # both dates from Python local time — the SQLite default is UTC and a
+        # 9pm ET insert would otherwise be born with last_seen < discovered_date
+        "discovered_date": date.today().isoformat(),
         "last_seen": date.today().isoformat(),
     })
     return ("new", stored_pri)
