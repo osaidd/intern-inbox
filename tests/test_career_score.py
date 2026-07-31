@@ -26,6 +26,11 @@ def test_outside_metro_never_stored():
     assert matches(_job(location="San Francisco, CA"), CFG) is False
     assert is_nyc_metro("Hoboken, NJ") is True
     assert is_nyc_metro(None) is False
+    # substring traps: California beach towns are not the NYC metro (real
+    # 2026-07-31 leak: K1 in "Manhattan Beach, CA" passed via 'manhattan')
+    assert is_nyc_metro("Manhattan Beach, CA") is False
+    assert matches(_job(location="Manhattan Beach, California"), CFG) is False
+    assert is_nyc_metro("Manhattan, NY") is True
 
 
 def test_exclude_title_and_megacorp():

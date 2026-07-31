@@ -45,6 +45,8 @@ def is_nyc_metro(location) -> bool:
     if not isinstance(location, str):
         return False
     loc = location.lower()
+    if "manhattan beach" in loc:   # CA beach town — 'manhattan' substring trap
+        return False
     cfg_free_markers = ("new york", "nyc", "brooklyn", "manhattan", "queens", "bronx",
                         "staten island", "long island city",
                         "jersey city", "hoboken", "newark", "weehawken", "secaucus")
