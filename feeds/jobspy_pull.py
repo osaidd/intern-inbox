@@ -68,8 +68,16 @@ def score_job(title: str, description, posted_date, cfg: dict):
     return round(raw, 4)
 
 
+class JobspyNotInstalled(Exception):
+    """The optional jobspy extra is absent — core install skips this feed."""
+
+
 def fetch_jobs(cfg: dict) -> list:
-    from jobspy import scrape_jobs  # heavy import, keep local
+    try:
+        from jobspy import scrape_jobs  # heavy import, keep local
+    except ModuleNotFoundError:
+        raise JobspyNotInstalled(
+            "Indeed/Google search is an optional extra — enable with: uv sync --extra jobspy")
     src = cfg["jobspy"]
     jobs = []
     for q in src["role_queries"]:
@@ -93,7 +101,17 @@ def main(dry_run: bool = False, trigger: str = "manual"):
     cfg = load_config()
     found = new = skipped = excluded = malformed = 0
     try:
-        jobs = fetch_jobs(cfg)
+        try:
+            jobs = fetch_jobs(cfg)
+        except JobspyNotInstalled as e:
+            print(f"jobspy skipped: {e}")
+            if not dry_run:
+                db.log_run(skill="jobspy-pull", trigger=trigger, status="partial",
+                           summary="skipped: optional jobspy extra not installed",
+                           started_at=started,
+                           finished_at=datetime.now().isoformat(timespec="seconds"),
+                           metrics_json="{}")
+            return
         found = len(jobs)
         ch_cfg = ch_config.load()
         conn = db.connect()

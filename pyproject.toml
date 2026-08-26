@@ -2,13 +2,18 @@
 name = "intern-inbox"
 version = "0.1.0"
 description = "NYC/NJ internship pipeline for NOC students — ATS boards, job-alert email parsing, and a local triage inbox"
-requires-python = ">=3.14"
+requires-python = ">=3.12"
 license = "MIT"
 dependencies = [
     "fastapi>=0.139.0",
-    "python-jobspy>=1.1.82",
     "uvicorn>=0.49.0",
 ]
+
+[project.optional-dependencies]
+# Indeed/Google search via JobSpy: ~160MB of transitive weight (pandas, numpy,
+# tls-client) for the flakiest feed. Core installs without it; enable with
+#   uv sync --extra jobspy
+jobspy = ["python-jobspy>=1.1.82"]
 
 [project.scripts]
 intern-inbox = "career_inbox.__main__:main"

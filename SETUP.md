@@ -197,6 +197,11 @@ uv run intern-inbox --port 8500
 
 Then open <http://127.0.0.1:8500>.
 
+**JobSpy says "skipped: optional extra not installed".**
+That is the default: the Indeed/Google feed needs ~160MB of extra libraries and
+is the least reliable source, so the core install leaves it out. The board and
+email feeds are unaffected. Want it anyway? Run `uv sync --extra jobspy` once.
+
 **A check finishes but JobSpy reports an error.**
 JobSpy scrapes public job boards and those boards rate-limit. It fails some days
 and works the next. Press **Check now** again later. The other sources are

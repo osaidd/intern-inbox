@@ -216,3 +216,26 @@ def test_main_excludes_big_companies_and_red_flag_jds(inbox_db, monkeypatch, cap
     assert "excluded=2" in out and "new=1" in out
     rows = inbox_db.connect().execute("SELECT company FROM opportunities").fetchall()
     assert [r["company"] for r in rows] == ["Ramp"]
+
+
+def test_main_skips_gracefully_without_the_extra(tmp_path, monkeypatch):
+    """Core installs omit python-jobspy (~160MB of transitive weight). The feed
+    must skip with an honest 'partial' run_log row, never a traceback."""
+    import builtins
+    import db as db_mod
+    from feeds import jobspy_pull
+
+    monkeypatch.setattr(db_mod, "DB_PATH", tmp_path / "life.db")
+    db_mod.migrate()
+    real_import = builtins.__import__
+
+    def no_jobspy(name, *a, **kw):
+        if name == "jobspy":
+            raise ModuleNotFoundError("No module named 'jobspy'")
+        return real_import(name, *a, **kw)
+    monkeypatch.setattr(builtins, "__import__", no_jobspy)
+    jobspy_pull.main()          # must not raise
+    conn = db_mod.connect()
+    log = conn.execute("SELECT status, summary FROM run_log ORDER BY id DESC LIMIT 1").fetchone()
+    conn.close()
+    assert log["status"] == "partial" and "extra not installed" in log["summary"]

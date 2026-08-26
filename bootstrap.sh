@@ -6,8 +6,13 @@
 set -e
 
 if ! command -v git >/dev/null 2>&1; then
-  echo "git is missing. On a Mac, run:  xcode-select --install"
-  echo "then re-run this command once that finishes."
+  if [ "$(uname)" = "Darwin" ]; then
+    echo "git is missing — opening Apple's installer for you now."
+    echo "Click Install, wait for it to finish, then paste this command again."
+    xcode-select --install >/dev/null 2>&1 || true
+  else
+    echo "git is missing — install it with your package manager, then re-run."
+  fi
   exit 1
 fi
 
@@ -26,9 +31,16 @@ else
 fi
 
 cd "$DIR"
-echo "Installing dependencies (a few minutes the first time)..."
+echo "Installing dependencies (well under a minute on a normal connection)..."
 uv sync
 
 printf '\nAll set. Two steps left:\n'
 printf '  1. Open the folder  %s  in Claude Code\n' "$DIR"
 printf '  2. Type  /setup  and follow the conversation\n'
+
+# zero-friction handoff: if the Claude Code CLI is on this machine, start it
+# in the project right now so steps 1 and 2 collapse into "type /setup"
+if command -v claude >/dev/null 2>&1; then
+  printf '\nFound Claude Code — opening the project in it now. Type /setup when it loads.\n'
+  cd "$DIR" && exec claude
+fi

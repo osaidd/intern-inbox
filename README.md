@@ -60,7 +60,7 @@ Prefer doing the steps by hand? Install [uv](https://docs.astral.sh/uv/) first
 | Ashby + Greenhouse posting APIs | The cohort's shared NYC company job boards, swept once a day |
 | Your job-alert emails | LinkedIn, Built In, and Wellfound alerts, read from your Gmail inbox |
 | SimplifyJobs GitHub lists | The big public internship lists |
-| Indeed + Google, via JobSpy | Broader board search on your target titles |
+| Indeed + Google, via JobSpy (optional) | Broader board search — off by default; `uv sync --extra jobspy` turns it on |
 
 Job descriptions are saved alongside the listing — straight from the board where
 the source provides them, fetched afterwards where it does not — so search
