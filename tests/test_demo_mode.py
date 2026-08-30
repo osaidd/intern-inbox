@@ -114,3 +114,18 @@ def test_owner_writes_are_not_403_when_off(live):
     they just must not be blocked by the demo gate."""
     assert live.post("/api/email-saved", json={}).status_code != 403
     assert live.post("/api/wizard/complete", json=WIZARD_BODY).status_code == 200
+
+
+# ---------------- the Host allowlist this branch widens ----------------
+
+def test_foreign_host_is_rejected_when_off(live):
+    """A normal install stays pinned to loopback, so DNS-rebinding cannot drive
+    someone's local inbox from a page they happen to be visiting."""
+    assert live.get("/", headers={"host": "evil.example"}).status_code == 400
+
+
+def test_any_host_is_accepted_in_demo(demo):
+    """The public instance is reached by its own fly.dev hostname (and by fly's
+    internal health checks), so it has to allow any Host — there is nothing for
+    rebinding protection to protect on a deliberately public box."""
+    assert demo.get("/", headers={"host": "evil.example"}).status_code != 400

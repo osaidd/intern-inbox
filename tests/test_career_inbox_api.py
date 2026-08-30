@@ -88,6 +88,19 @@ def test_jobs_carry_term(client):
     assert by_co["Solva"]["term"] is None       # no season anywhere → honest None
 
 
+def test_oversized_payloads_are_rejected_not_crashed(client):
+    """Uncapped, a bulk `ids` list walks into SQLite's 32,767-variable ceiling and
+    the OperationalError escapes as a 500; an uncapped note is a free memory sink.
+    Both must come back as a clean 422 well before either limit."""
+    jid = client.get("/api/jobs").json()["jobs"][0]["id"]
+    assert client.post("/api/jobs/bulk",
+                       json={"ids": [jid] * 501, "action": "kill"}).status_code == 422
+    assert client.post(f"/api/jobs/{jid}/note",
+                       json={"text": "x" * 10_001}).status_code == 422
+    # the row is untouched: neither oversized request got as far as a write
+    assert client.get("/api/jobs").json()["total"] == 1
+
+
 def test_add_endpoint_inserts_and_dedupes(client):
     payload = [{"company": "Vantable", "role": "AI Engineering Intern", "url": "https://v.co/1",
                 "location": "Brooklyn, NY", "stage_hint": "seed", "headcount_hint": 12}]

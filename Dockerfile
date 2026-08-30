@@ -10,6 +10,17 @@ WORKDIR /app
 COPY . .
 RUN uv sync --frozen --no-dev
 
+# Nothing in the demo needs root. The entrypoint writes only inside /app --
+# config/career.toml and data/inbox.db -- so /app changes hands. data/ is made
+# here rather than left to db.migrate() so it is owned by demo from the start.
+# HOME is explicit: Docker keeps /root across a USER switch, and uv would then
+# try to write its cache somewhere this user cannot.
+RUN useradd --create-home --uid 10001 demo \
+    && mkdir -p /app/data \
+    && chown -R demo:demo /app /home/demo
+USER demo
+ENV HOME=/home/demo
+
 # The two UV_ vars matter: `uv run` re-syncs the environment before it runs, so
 # without them the entrypoint would try to re-resolve the lockfile AND install
 # the dev group (pytest, httpx) at container start — network the demo box may

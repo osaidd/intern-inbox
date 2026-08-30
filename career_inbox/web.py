@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
@@ -222,12 +222,16 @@ class StatusBody(BaseModel):
     status: str
 
 
+# The caps are right for a normal install too, not just the demo: bulk acts on
+# rows the user can actually see and a note is a line or two. Uncapped, `ids`
+# reaches SQLite's 32,767-variable ceiling and the OperationalError surfaces as
+# an unhandled 500, and `text` is a free memory sink on a 256MB box.
 class NoteBody(BaseModel):
-    text: str = ""
+    text: str = Field("", max_length=10_000)
 
 
 class BulkBody(BaseModel):
-    ids: list[int]
+    ids: list[int] = Field(..., max_length=500)
     action: str
 
 
@@ -255,11 +259,10 @@ def post_bulk(body: BulkBody):
         raise HTTPException(422, str(e))
 
 
-@app.post("/api/add")
-def add_jobs(payload: list[dict]):
-    """Ingestion door for external tooling: POST a list of postings and they land in
-    the pipeline through the same gates and dedupe as any feed."""
-    _demo_block()
+def _ingest(payload: list[dict]) -> dict:
+    """The blocking half of /api/add. Kept sync and handed to a worker thread so
+    the SQLite writes stay off the event loop, exactly as they did when this was
+    a plain `def` handler and FastAPI ran it in its threadpool."""
     cfg = ch_config.load()
     stats = {"new": 0, "dup": 0, "excluded": 0}
     conn = db.connect()
@@ -280,6 +283,28 @@ def add_jobs(payload: list[dict]):
     finally:
         conn.close()
     return stats
+
+
+@app.post("/api/add")
+async def add_jobs(request: Request):
+    """Ingestion door for external tooling: POST a list of postings and they land in
+    the pipeline through the same gates and dedupe as any feed.
+
+    The body is read by hand instead of declared as `payload: list[dict]`, because
+    a typed signature makes FastAPI decode and validate the whole body BEFORE the
+    handler runs — the demo's 403 would then arrive only after an attacker-sized
+    JSON parse, on a 256MB box. Blocking first is what the other three closed
+    endpoints already do; the isinstance check below keeps the 422 that the typed
+    signature used to give for a body that is not a list of objects."""
+    _demo_block()
+    _require_json(request)
+    try:
+        payload = await request.json()
+    except ValueError:
+        raise HTTPException(422, "expected a JSON list of postings")
+    if not isinstance(payload, list) or not all(isinstance(i, dict) for i in payload):
+        raise HTTPException(422, "expected a JSON list of postings")
+    return await asyncio.to_thread(_ingest, payload)
 
 
 @app.post("/api/email-saved")
