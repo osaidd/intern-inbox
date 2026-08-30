@@ -1,6 +1,7 @@
 """career-inbox — standalone career app (spec 2026-07-12). Read-mostly FastAPI;
 ALL writes route through career_inbox.actions (the narrow write surface)."""
 import asyncio
+import os
 import sys
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
@@ -21,6 +22,21 @@ from career_hunt.term import term  # noqa: E402
 from career_inbox import actions, pull, wizard  # noqa: E402
 from feeds.ats_pull import load_orgs  # noqa: E402
 from feeds.envfile import load_env  # noqa: E402
+
+
+# Hosted-demo mode: the public instance at intern-inbox-demo.fly.dev runs the
+# real app over invented seed data (automation/seed_demo.py) and is wiped hourly.
+# Read once at import; the Dockerfile sets it, a normal install never does.
+DEMO = os.environ.get("INTERN_INBOX_DEMO") == "1"
+DEMO_BLOCKED = "This is the public demo — install your own inbox to use this."
+
+
+def _demo_block():
+    """Shut the endpoints that touch the owner's mail, config, or the network.
+    Status/note/bulk stay open on purpose — triaging rows IS the demo, and the
+    hourly reset undoes whatever visitors do."""
+    if DEMO:
+        raise HTTPException(403, DEMO_BLOCKED)
 
 
 def _checked_recently(minutes: int) -> bool:
@@ -44,7 +60,13 @@ def _checked_recently(minutes: int) -> bool:
 @asynccontextmanager
 async def _lifespan(app: "FastAPI"):
     """In-process auto-check: every 30 min, skip if running or a check ran <25 min ago.
-    Sleeps first, so a pytest-spawned app never fires a check during the test run."""
+    Sleeps first, so a pytest-spawned app never fires a check during the test run.
+    Never runs in demo mode: the public instance shows invented rows only, so it
+    must not reach out to IMAP or the ATS APIs and mix real listings in."""
+    if DEMO:
+        yield
+        return
+
     async def loop():
         while True:
             await asyncio.sleep(30 * 60)
@@ -63,9 +85,12 @@ async def _lifespan(app: "FastAPI"):
 
 app = FastAPI(title="career-inbox", lifespan=_lifespan)
 # localhost-only app: reject DNS-rebinding (foreign Host headers). The port is
-# not pinned so --port N keeps working.
+# not pinned so --port N keeps working. The hosted demo is deliberately public
+# and reached by its own hostname, where rebinding protection means nothing —
+# so that one mode allows any Host.
 from starlette.middleware.trustedhost import TrustedHostMiddleware  # noqa: E402
-app.add_middleware(TrustedHostMiddleware, allowed_hosts=["127.0.0.1", "localhost"])
+app.add_middleware(TrustedHostMiddleware,
+                   allowed_hosts=["*"] if DEMO else ["127.0.0.1", "localhost"])
 
 LIVE = ("new", "shortlisted", "applied", "interviewing")
 ALL_STATUSES = ("new", "shortlisted", "applied", "interviewing", "offer",
@@ -165,12 +190,15 @@ def meta():
     except Exception:  # noqa: BLE001
         boards = 0
     ats = {"boards": boards, "last_sweep": sweep[0] if sweep else None}
-    return {"counts": counts,
-            "families": sorted({role_family(r["role"]) for r in live_rows}),
-            "stages": sorted({r["stage"] for r in live_rows if r["stage"]}),
-            "sources": sorted({r["source"] for r in live_rows}),
-            "ats": ats,
-            "last_check": last[0] if last else None}
+    out = {"counts": counts,
+           "families": sorted({role_family(r["role"]) for r in live_rows}),
+           "stages": sorted({r["stage"] for r in live_rows if r["stage"]}),
+           "sources": sorted({r["source"] for r in live_rows}),
+           "ats": ats,
+           "last_check": last[0] if last else None}
+    if DEMO:
+        out["demo"] = True      # the front end's cue to raise the demo banner
+    return out
 
 
 @app.get("/api/offices")
@@ -231,6 +259,7 @@ def post_bulk(body: BulkBody):
 def add_jobs(payload: list[dict]):
     """Ingestion door for external tooling: POST a list of postings and they land in
     the pipeline through the same gates and dedupe as any feed."""
+    _demo_block()
     cfg = ch_config.load()
     stats = {"new": 0, "dup": 0, "excluded": 0}
     conn = db.connect()
@@ -255,6 +284,7 @@ def add_jobs(payload: list[dict]):
 
 @app.post("/api/email-saved")
 def email_saved(request: Request):
+    _demo_block()
     _require_json(request)
     load_env()
     conn = db.connect_ro()
@@ -289,6 +319,7 @@ def _require_json(request):
 
 @app.post("/api/pull")
 async def api_pull(request: Request):
+    _demo_block()
     _require_json(request)
     if pull.STATE["running"]:
         raise HTTPException(409, "check already running")
@@ -316,6 +347,7 @@ def wizard_state():
 
 @app.post("/api/wizard/complete")
 async def wizard_complete(request: Request):
+    _demo_block()
     _require_json(request)
     try:
         # parsing lives inside the try so a truncated or non-object body is a
@@ -333,9 +365,12 @@ async def wizard_complete(request: Request):
 
 @app.get("/")
 def root():
-    """Unconfigured installs land on the wizard, not a dashboard with no data."""
+    """Unconfigured installs land on the wizard, not a dashboard with no data.
+    The demo never does: its container preconfigures itself, and a visitor who
+    somehow arrives before that must still see the dashboard, not a wizard whose
+    submit button is 403'd anyway."""
     from fastapi.responses import FileResponse, RedirectResponse
-    if wizard.state()["configured"]:
+    if DEMO or wizard.state()["configured"]:
         return FileResponse(STATIC / "index.html")
     return RedirectResponse("/welcome.html", status_code=302)
 

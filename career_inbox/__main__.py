@@ -1,5 +1,6 @@
 """Entry point: uv run intern-inbox [--port 8477] [--open]."""
 import argparse
+import os
 
 
 def main():
@@ -19,7 +20,10 @@ def main():
         import webbrowser
         threading.Timer(1.2, lambda: webbrowser.open(
             f"http://127.0.0.1:{a.port}")).start()
-    uvicorn.run(app, host="127.0.0.1", port=a.port, log_level="warning")
+    # localhost by default — the only container that widens this is the hosted
+    # demo, whose Dockerfile sets INTERN_INBOX_HOST=0.0.0.0.
+    host = os.environ.get("INTERN_INBOX_HOST", "127.0.0.1")
+    uvicorn.run(app, host=host, port=a.port, log_level="warning")
 
 
 if __name__ == "__main__":

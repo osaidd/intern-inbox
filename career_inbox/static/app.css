@@ -413,12 +413,12 @@ body.wizard-body { padding: 0 22px 72px; }
 
 /* ---------- unconfigured strip + re-run gear (inbox) ----------
    Amber, like every other "works, but partial" state in this shell. */
-#wizbanner { padding: 9px 28px; font-size: 12.5px;
+#wizbanner, #demobanner { padding: 9px 28px; font-size: 12.5px;
              background: rgba(216, 167, 92, 0.07);
              border-bottom: 1px solid rgba(216, 167, 92, 0.35); }
-#wizbanner a { color: var(--warn); text-decoration: underline;
+#wizbanner a, #demobanner a { color: var(--warn); text-decoration: underline;
                text-underline-offset: 3px; }
-#wizbanner a:hover { color: var(--ink); }
+#wizbanner a:hover, #demobanner a:hover { color: var(--ink); }
 /* icon-only deck button: square padding, and quieter than the worded ones */
 #prefs { padding: 5px 9px; font-size: 14px; line-height: 1.15; color: var(--muted); }
 #prefs:hover { color: var(--ink); }
@@ -426,5 +426,5 @@ body.wizard-body { padding: 0 22px 72px; }
 @media (max-width: 750px) {
   body.wizard-body { padding: 0 18px 56px; }
   .wizard { padding-top: 36px; }
-  #wizbanner { padding-left: 18px; padding-right: 18px; }
+  #wizbanner, #demobanner { padding-left: 18px; padding-right: 18px; }
 }

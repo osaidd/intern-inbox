@@ -161,6 +161,20 @@ async function loadMeta() {
   } catch { S.meta = null; }
   renderCounts();
   updateEmailBtn();
+  demoBanner();
+}
+
+/* The public demo says so above the fold, once — loadMeta() runs on every
+   refresh, so the id check is what keeps it to a single strip. */
+function demoBanner() {
+  if (!(S.meta && S.meta.demo) || document.getElementById("demobanner")) return;
+  const header = document.querySelector("header");
+  if (!header) return;
+  const b = document.createElement("div");
+  b.id = "demobanner";
+  b.innerHTML = 'Invented demo data — resets every hour. ' +
+    '<a href="https://osaidd.github.io/intern-inbox/">Get your own inbox →</a>';
+  header.after(b);
 }
 
 async function load() {
