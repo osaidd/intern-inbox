@@ -10,9 +10,11 @@ Everything you write goes in GITIGNORED files: `config/career.toml`,
 personal values into tracked files. Record start time (run_log needs it).
 
 If `config/career.toml` exists, say so and ask what to update (resume / roles /
-email / boards) — do only that section, then re-run step 6, then step 7 (the
-run_log write is non-optional even for a partial update — name the updated
-section(s) in the summary, e.g. "updated: roles").
+email / boards) — a file whose first line is `# written-by: intern-inbox-wizard`
+came from the in-app wizard, so treat those answers as a valid starting point
+and personalize on top of them. Do only that section, then re-run step 6, then
+step 7 (the run_log write is non-optional even for a partial update — name the
+updated section(s) in the summary, e.g. "updated: roles").
 
 **Resume update** (the most common re-run — "new resume", "update my resume"):
 ask for the new PDF (dropped into the folder) or pasted text, re-derive the
@@ -61,6 +63,12 @@ Suggest `/skills-gap` afterwards — the market report reads the new profile.
    exclude_companies with their dealbreaker companies, set `[email] to` and
    `smtp_user` to their address. Write `config/.env` scaffold:
        CAREER_IMAP_PASS=   # Gmail app password — step 5
+
+   **Strip the wizard header.** Whenever you write or rewrite
+   `config/career.toml`, delete the `# written-by: intern-inbox-wizard` line and
+   the wizard comment lines under it — the file is resume-personalized now, not
+   wizard-owned. That header is what makes an in-app wizard re-run overwrite the
+   file WITHOUT its confirm prompt, silently discarding everything you derived.
 
    **`[role]` and `[scoring]` MUST be written together.** `config/career.toml`
    carries the same three lists (profile_keywords, exclude_keywords,
