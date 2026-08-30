@@ -70,6 +70,17 @@ def test_show_everything_clears_blocklist_and_avoid_appends(paths):
     assert raw["role"]["exclude_companies"] == ["BadCo"]
 
 
+def test_startups_only_keeps_blocklist_and_appends_avoid(paths):
+    user, _ = paths
+    example = ch_config.load(ch_config.EXAMPLE_PATH)
+    wizard.apply(dict(BASE, startups_only=True, avoid=["BadCo"]), force=False)
+    raw = tomllib.loads(user.read_text())
+    excludes = raw["role"]["exclude_companies"]
+    assert "Google" in excludes                                 # default blocklist retained
+    assert len(excludes) >= len(example.exclude_companies)
+    assert "BadCo" in excludes                                  # avoid still appended
+
+
 def test_email_written_to_config_and_env(paths):
     user, env = paths
     wizard.apply(dict(BASE, email_address="a@b.com", imap_pass="abcd efgh ijkl mnop"),
@@ -105,6 +116,19 @@ def test_env_update_preserves_other_keys(paths):
     assert "CAREER_IMAP_PASS=old" not in text
 
 
+def test_email_only_update_preserves_existing_password(paths):
+    """Re-running with a new address but a blank imap_pass field (e.g. the user
+    didn't re-type their app password) must update USER and leave the
+    previously-saved PASS alone — never stale, never deleted."""
+    user, env = paths
+    env.write_text("CAREER_IMAP_USER=old@x.com\nCAREER_IMAP_PASS=keepme\n")
+    wizard.apply(dict(BASE, email_address="new@x.com", imap_pass=""), force=False)
+    text = env.read_text()
+    assert "CAREER_IMAP_USER=new@x.com" in text                 # address updated
+    assert "CAREER_IMAP_PASS=keepme" in text                    # old password preserved
+    assert "CAREER_IMAP_USER=old@x.com" not in text
+
+
 def test_validation_rejects_junk(paths):
     with pytest.raises(ValueError):
         wizard.apply(dict(BASE, roles=[]), force=False)
@@ -112,3 +136,53 @@ def test_validation_rejects_junk(paths):
         wizard.apply(dict(BASE, roles=["nope"]), force=False)
     with pytest.raises(ValueError):
         wizard.apply(dict(BASE, size="custom", custom_cap=3), force=False)
+
+
+def test_control_char_in_avoid_rejected_and_existing_config_untouched(paths):
+    user, _ = paths
+    wizard.apply(dict(BASE), force=False)                       # existing wizard-written config
+    before = user.read_text()
+    with pytest.raises(ValueError):
+        wizard.apply(dict(BASE, avoid=["Bad\nCo"]), force=False)
+    assert user.read_text() == before                           # byte-identical, untouched
+    assert not user.with_name("career.toml.tmp").exists()       # no leaked temp file
+
+
+def test_control_char_in_email_address_rejected(paths):
+    with pytest.raises(ValueError):
+        wizard.apply(dict(BASE, email_address="a@b.com\r\nX-Injected: 1"), force=False)
+
+
+def test_atomic_write_happy_path_round_trips_with_no_leftover_temp(paths):
+    user, _ = paths
+    st = wizard.apply(dict(BASE), force=False)
+    assert st == {"configured": True, "wizard_written": True}
+    cfg = ch_config.load(user)
+    assert cfg.company.hard_cap_headcount == 50
+    assert not user.with_name("career.toml.tmp").exists()       # staging file swapped away
+
+
+def test_presets_never_target_an_excluded_title():
+    """No preset may advertise a target_title that the example config's own
+    [role].exclude_keywords would filter out at ingest (score.matches() does a
+    raw substring check against the job title) — a preset that collides would
+    silently kill the very postings it exists to surface. Regression coverage
+    for bizops's former 'chief of staff intern' vs. the 'staff' keyword."""
+    presets = wizard.load_presets()
+    excl = [k.lower() for k in ch_config.load(ch_config.EXAMPLE_PATH).exclude_keywords]
+    for key, preset in presets.items():
+        for title in preset["target_titles"]:
+            t = title.lower()
+            hits = [k for k in excl if k in t]
+            assert not hits, f"{key} target_title {title!r} collides with exclude_keyword(s) {hits}"
+
+
+def test_load_presets_contract():
+    """Task 3's contract: load_presets() -> {key: {label, profile_keywords,
+    target_titles}} for exactly the five curated bundles."""
+    presets = wizard.load_presets()
+    assert set(presets.keys()) == {"swe_ai", "product", "data", "gtm_growth", "bizops"}
+    for key, preset in presets.items():
+        assert preset.get("label"), key
+        assert preset.get("profile_keywords"), key
+        assert preset.get("target_titles"), key

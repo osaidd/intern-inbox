@@ -1,6 +1,14 @@
 # Curated starter bundles for the first-run wizard. Each maps role checkboxes to
 # the [role]/[scoring] keyword + title lists. /setup replaces these with
 # resume-derived lists; the wizard just unions the chosen bundles.
+#
+# CAUTION: no target_titles entry below may contain, as a substring, any word from
+# config/career.example.toml's [role].exclude_keywords (currently "senior", "staff",
+# "director", "phd", "clearance") — score.matches() drops a posting whose title
+# contains one of those words, so a target title colliding with one would filter out
+# the very postings this preset exists to surface (e.g. "chief of staff intern" vs.
+# the "staff" exclude keyword — fixed 2026-08-30). tests/test_wizard.py::
+# test_presets_never_target_an_excluded_title guards this for every preset.
 
 [swe_ai]
 label = "Software / AI Engineering"
@@ -24,5 +32,5 @@ target_titles = ["growth intern", "marketing intern", "gtm intern", "sales inter
 
 [bizops]
 label = "BizOps / Operations / Finance"
-profile_keywords = ["operations", "bizops", "strategy", "finance", "fintech", "excel", "modeling", "process", "chief of staff"]
-target_titles = ["business operations intern", "operations intern", "bizops intern", "strategy intern", "finance intern", "founders associate", "chief of staff intern"]
+profile_keywords = ["operations", "bizops", "strategy", "finance", "fintech", "excel", "modeling", "process"]
+target_titles = ["business operations intern", "operations intern", "bizops intern", "strategy intern", "finance intern", "founders associate"]

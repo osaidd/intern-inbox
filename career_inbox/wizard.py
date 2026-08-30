@@ -2,6 +2,7 @@
 config/.env. Writes GITIGNORED files only. The emitted career.toml starts with
 WIZARD_MARKER so re-runs are safe and /setup-personalized files are never
 silently clobbered (WizardConflict without force=True)."""
+import os
 import tomllib
 from pathlib import Path
 
@@ -45,6 +46,12 @@ def _union(lists):
             if x not in out:
                 out.append(x)
     return out
+
+
+def _has_control_char(s: str) -> bool:
+    """True if s contains a raw control character (e.g. \\n, \\t, \\r) — those
+    are never escaped by _toml_value and would corrupt the emitted file."""
+    return any(ord(c) < 32 for c in s)
 
 
 def _toml_value(v) -> str:
@@ -102,6 +109,8 @@ def _build(choices: dict) -> dict:
     kws = _union([presets[r]["profile_keywords"] for r in roles])
     titles = _union([presets[r]["target_titles"] for r in roles])
     avoid = [a.strip() for a in choices.get("avoid", []) if a.strip()]
+    if any(_has_control_char(a) for a in avoid):
+        raise ValueError("avoid entries must not contain control characters")
     base_block = doc["role"]["exclude_companies"] if choices.get("startups_only", True) else []
     excludes = _union([base_block, avoid])
     # [role] and [scoring] lists are deliberate copies — keep in sync (see example)
@@ -111,6 +120,8 @@ def _build(choices: dict) -> dict:
     doc["role"]["exclude_companies"] = excludes
 
     addr = (choices.get("email_address") or "").strip()
+    if addr and _has_control_char(addr):
+        raise ValueError("email_address must not contain control characters")
     if addr:
         doc["email"]["to"] = addr
         doc["email"]["smtp_user"] = addr
@@ -118,8 +129,13 @@ def _build(choices: dict) -> dict:
 
 
 def _write_env(addr: str, imap_pass: str) -> None:
-    updates = {"CAREER_IMAP_USER": addr,
-               "CAREER_IMAP_PASS": imap_pass.replace(" ", "")}
+    """Upsert CAREER_IMAP_USER whenever addr is given. CAREER_IMAP_PASS is only
+    touched when a non-empty imap_pass is given — an address-only re-run (e.g.
+    changing the email without re-entering the app password) must never delete
+    a previously-saved password."""
+    updates = {"CAREER_IMAP_USER": addr}
+    if imap_pass:
+        updates["CAREER_IMAP_PASS"] = imap_pass.replace(" ", "")
     lines = ENV_PATH.read_text().splitlines() if ENV_PATH.exists() else []
     kept = [l for l in lines if l.split("=", 1)[0].strip() not in updates]
     kept += [f"{k}={v}" for k, v in updates.items()]
@@ -137,8 +153,18 @@ def apply(choices: dict, force: bool) -> dict:
               "# Re-running the wizard rewrites this file. /setup (Claude Code)\n"
               "# replaces it with resume-derived personalization.\n\n")
     ch_config.USER_PATH.parent.mkdir(parents=True, exist_ok=True)
-    ch_config.USER_PATH.write_text(header + _emit(doc) + "\n")
-    ch_config.load(ch_config.USER_PATH)       # emit must round-trip, or blow up now
-    if (choices.get("email_address") or "").strip() and choices.get("imap_pass"):
-        _write_env(choices["email_address"].strip(), choices["imap_pass"])
+    # Validate-then-swap: emit to a sibling temp file, confirm it loads, only
+    # THEN replace the real config atomically. A failure here (or any future
+    # gap in _toml_value's escaping) must never leave a half-written or
+    # unparseable career.toml in place of a working one.
+    staging = ch_config.USER_PATH.with_name("career.toml.tmp")
+    try:
+        staging.write_text(header + _emit(doc) + "\n")
+        ch_config.load(staging)                # emit must round-trip, or blow up now
+        os.replace(staging, ch_config.USER_PATH)   # atomic swap, only after validation
+    finally:
+        staging.unlink(missing_ok=True)         # no-op once swapped; cleans up on failure
+    addr = (choices.get("email_address") or "").strip()
+    if addr:
+        _write_env(addr, choices.get("imap_pass") or "")
     return state()
