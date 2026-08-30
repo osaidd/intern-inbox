@@ -1,8 +1,10 @@
 #!/bin/sh
-# intern-inbox bootstrap — one command from a fresh Mac (or Linux) to ready-to-/setup.
+# intern-inbox bootstrap — one command from a fresh Mac (or Linux) to a running app.
 #   curl -LsSf https://raw.githubusercontent.com/osaidd/intern-inbox/main/bootstrap.sh | sh
 # Installs uv if missing, clones (or updates) the repo into ~/intern-inbox,
-# installs dependencies, then tells you the two remaining steps.
+# installs dependencies, then opens the project in Claude Code if the CLI is
+# present — otherwise starts the app, which opens the browser on a 3-step
+# setup.
 set -e
 
 if ! command -v git >/dev/null 2>&1; then

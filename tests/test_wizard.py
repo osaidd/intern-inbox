@@ -1,5 +1,6 @@
 """Wizard core: preset mapping, TOML emit, write refusal. All writes go to
 tmp paths via monkeypatched module constants — never the real config/."""
+import os
 import tomllib
 
 import pytest
@@ -16,6 +17,21 @@ def paths(tmp_path, monkeypatch):
     monkeypatch.setattr(ch_config, "USER_PATH", user)
     monkeypatch.setattr(wizard, "ENV_PATH", env)
     return user, env
+
+
+@pytest.fixture(autouse=True)
+def _isolate_imap_env():
+    """apply() with an email address now mutates os.environ directly (see
+    wizard._write_env — it mirrors CAREER_IMAP_USER/PASS so a rotated
+    credential reaches the running process without a restart). Snapshot both
+    keys and restore exactly the pre-test state afterward so a test that
+    writes credentials can never leak them into a later test."""
+    keys = ("CAREER_IMAP_USER", "CAREER_IMAP_PASS")
+    before = {k: os.environ[k] for k in keys if k in os.environ}
+    yield
+    for k in keys:
+        os.environ.pop(k, None)
+    os.environ.update(before)
 
 
 BASE = {"roles": ["swe_ai"], "size": "tiny", "custom_cap": None,
@@ -91,6 +107,22 @@ def test_email_written_to_config_and_env(paths):
     text = env.read_text()
     assert "CAREER_IMAP_PASS=abcdefghijklmnop" in text          # spaces stripped
     assert "CAREER_IMAP_USER=a@b.com" in text
+
+
+def test_password_rotation_reaches_running_process_without_restart(paths):
+    """Regression: envfile.load_env() seeds os.environ with setdefault, so it
+    only ever runs once at boot. If a password was already loaded when the
+    gear is used to rotate it, the file alone updating is not enough — the
+    running process must see the new value immediately, or mail pulls keep
+    failing against the revoked credential with no hint why."""
+    user, env = paths
+    env.write_text("CAREER_IMAP_USER=a@b.com\nCAREER_IMAP_PASS=old\n")
+    os.environ["CAREER_IMAP_PASS"] = "old"
+    wizard.apply(dict(BASE, email_address="a@b.com", imap_pass="new"), force=False)
+    text = env.read_text()
+    assert "CAREER_IMAP_PASS=new" in text                       # file rotated
+    assert os.environ["CAREER_IMAP_PASS"] == "new"              # AND live in-process
+    assert os.environ["CAREER_IMAP_USER"] == "a@b.com"           # user key mirrored too
 
 
 def test_refuses_non_wizard_config_without_force(paths):

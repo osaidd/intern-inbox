@@ -132,7 +132,13 @@ def _write_env(addr: str, imap_pass: str) -> None:
     """Upsert CAREER_IMAP_USER whenever addr is given. CAREER_IMAP_PASS is only
     touched when a non-empty imap_pass is given — an address-only re-run (e.g.
     changing the email without re-entering the app password) must never delete
-    a previously-saved password."""
+    a previously-saved password.
+
+    Also mirrors the same keys into os.environ. feeds/envfile.py's load_env()
+    uses setdefault, so it only ever seeds os.environ once at boot — without
+    this, a credential rotated via a gear re-run would sit correctly in the
+    file while the already-running process kept using its stale, possibly
+    revoked, in-memory value until a restart."""
     updates = {"CAREER_IMAP_USER": addr}
     if imap_pass:
         updates["CAREER_IMAP_PASS"] = imap_pass.replace(" ", "")
@@ -141,6 +147,8 @@ def _write_env(addr: str, imap_pass: str) -> None:
     kept += [f"{k}={v}" for k, v in updates.items()]
     ENV_PATH.parent.mkdir(parents=True, exist_ok=True)
     ENV_PATH.write_text("\n".join(kept) + "\n")
+    for k, v in updates.items():
+        os.environ[k] = v
 
 
 def apply(choices: dict, force: bool) -> dict:
