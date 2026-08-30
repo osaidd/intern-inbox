@@ -1,0 +1,20 @@
+# Nothing personal reaches the public demo image. This mirrors .gitignore's
+# personal layer, plus build cruft that would only bloat the context.
+data/
+config/career.toml
+config/.env
+config/sources.local.toml
+profile/
+vault/
+
+.venv/
+.git/
+.pytest_cache/
+__pycache__/
+
+*.pdf
+*.docx
+resume*
+Resume*
+
+docs/

@@ -1,0 +1,17 @@
+# Fly.io config for the PUBLIC DEMO ONLY — see docs/DEMO.md. A normal install
+# never deploys anything.
+app = "intern-inbox-demo"
+primary_region = "ewr"
+
+[http_service]
+  internal_port = 8477
+  force_https = true
+  # Scale to zero between visitors: the demo costs nothing while nobody is
+  # looking, and a cold start just re-seeds the invented rows.
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"
