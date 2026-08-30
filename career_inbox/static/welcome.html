@@ -1,0 +1,58 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Welcome — Intern Inbox</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="/app.css"></head>
+<body class="wizard-body">
+<main class="wizard">
+  <h1>Intern Inbox</h1>
+  <p class="sub">Three quick questions and your inbox starts filling with NYC/NJ internships. Everything stays on your computer.</p>
+
+  <section class="wstep" id="step1">
+    <h2><span class="wnum">1</span> What are you looking for?</h2>
+    <p class="whint">Pick everything that applies — this seeds your keywords and rankings.</p>
+    <div id="roleBoxes" class="wchoices"></div>
+  </section>
+
+  <section class="wstep" id="step2">
+    <h2><span class="wnum">2</span> How big can the company be?</h2>
+    <p class="whint">Listings from bigger companies are hidden or killed automatically. Sizes are confirmed as companies get enriched — an unconfirmed company is never dropped.</p>
+    <div class="wchoices" id="sizeBoxes">
+      <label class="wcard"><input type="radio" name="size" value="tiny" checked>
+        <b>Tiny startups</b><span>up to ~50 people · pre-seed to Series A</span></label>
+      <label class="wcard"><input type="radio" name="size" value="small">
+        <b>Small startups</b><span>up to ~100 people · through Series B</span></label>
+      <label class="wcard"><input type="radio" name="size" value="mid">
+        <b>Mid-size too</b><span>up to ~500 people · any stage</span></label>
+      <label class="wcard"><input type="radio" name="size" value="any">
+        <b>Any size</b><span>show me everything</span></label>
+      <label class="wcard"><input type="radio" name="size" value="custom">
+        <b>Custom cap</b><span><input type="number" id="customCap" min="10" max="10000" placeholder="70"> people max</span></label>
+    </div>
+    <label class="wtoggle"><input type="checkbox" id="startupsOnly" checked>
+      Hide big-name companies (Google, Goldman, Meta …) — uncheck to include them</label>
+    <input id="avoid" type="text" placeholder="Companies to avoid, comma-separated (optional)">
+  </section>
+
+  <section class="wstep" id="step3">
+    <h2><span class="wnum">3</span> Job-alert emails <span class="wopt">optional</span></h2>
+    <p class="whint">The app can read LinkedIn/Built In/Wellfound job alerts out of your Gmail inbox. It uses a separate 16-character app password — your real password is never used. You can skip this and add it later.</p>
+    <details class="wapppass"><summary>How to get the app password (1 minute)</summary>
+      <ol>
+        <li>Turn on 2-Step Verification: <a href="https://myaccount.google.com/security" target="_blank" rel="noopener">myaccount.google.com/security</a></li>
+        <li>Create an app password named <code>intern-inbox</code>: <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener">myaccount.google.com/apppasswords</a></li>
+        <li>Copy the 16-character code below (spaces don't matter).</li>
+      </ol>
+    </details>
+    <input id="emailAddr" type="email" placeholder="you@gmail.com">
+    <input id="imapPass" type="password" placeholder="16-character app password">
+  </section>
+
+  <div class="wactions">
+    <button id="finish" class="deck">Start my inbox</button>
+    <a id="skip" href="/index.html">Skip for now →</a>
+  </div>
+  <p class="wnote">Deeper personalization — rankings derived from your resume, market scans, skills-gap reports — comes from opening this folder in <a href="https://claude.com/claude-code" target="_blank" rel="noopener">Claude Code</a> and saying "set me up". Recommended, not required.</p>
+  <p id="werr" class="werr" hidden></p>
+</main>
+<script src="/wizard.js"></script>
+</body></html>

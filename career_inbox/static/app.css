@@ -332,3 +332,99 @@ img.co-logo { object-fit: contain; background: var(--bg-inset, #1c1c1f); }
   font-size: 11px; font-weight: 600; text-align: center; }
 .d-co .co-logo { vertical-align: -5px; margin-right: 8px; }
 td .co-sub { margin-left: 26px; }
+
+/* ---------- first-run wizard (/welcome.html) ----------
+   Same ledger, one column: hairline-separated steps, surface cards, no
+   decoration. Selection reads as ink-on-raised, exactly like .d-stat.on. */
+body.wizard-body { padding: 0 22px 72px; }
+.wizard { max-width: 640px; margin: 0 auto; padding-top: 56px; }
+.wizard h1 { color: var(--ink); font-size: 21px; font-weight: 600;
+             letter-spacing: -0.02em; }
+.wizard .sub { font-size: 13.5px; margin-top: 8px; max-width: 58ch; }
+
+.wstep { margin-top: 26px; padding-top: 24px; border-top: 1px solid var(--line); }
+.wstep h2 { display: flex; align-items: center; gap: 9px; color: var(--ink);
+            font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+.wnum { display: inline-flex; align-items: center; justify-content: center;
+        width: 20px; height: 20px; flex: none; border-radius: 50%;
+        border: 1px solid var(--line-strong); color: var(--muted);
+        font-size: 11px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.wopt { color: var(--muted); font-size: 11px; font-weight: 500;
+        text-transform: uppercase; letter-spacing: 0.06em; }
+.whint { color: var(--muted); font-size: 12.5px; margin-top: 6px; max-width: 62ch; }
+
+/* choice grid — .wcard is a 2-column grid so the sub-line always aligns under
+   the title, whatever width the browser gives the native radio/checkbox */
+.wchoices { display: grid; gap: 8px; margin-top: 14px;
+            grid-template-columns: repeat(auto-fit, minmax(224px, 1fr)); }
+.wcard { display: grid; grid-template-columns: auto 1fr; align-items: center;
+  gap: 3px 8px; background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 10px 12px; cursor: pointer;
+  transition: border-color 0.15s ease-out, background-color 0.15s ease-out; }
+.wcard:hover { border-color: var(--line-strong); }
+.wcard b { color: var(--ink); font-size: 13.5px; font-weight: 500; }
+.wcard span { grid-column: 2; color: var(--muted); font-size: 12px;
+              line-height: 1.45; }
+.wcard:has(input:checked) { border-color: var(--ink); background: var(--raised); }
+.wcard :is(input[type="radio"], input[type="checkbox"]) { accent-color: var(--ink); }
+
+.wtoggle { display: flex; align-items: flex-start; gap: 9px; margin-top: 16px;
+           font-size: 13px; cursor: pointer; }
+.wtoggle input { margin-top: 3px; flex: none; accent-color: var(--ink); }
+
+/* text fields mirror the search/select control surface */
+.wizard :is(input[type="text"], input[type="email"], input[type="password"],
+            input[type="number"]) {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius); color: var(--text); font-size: 13px;
+  padding: 6px 10px; transition: border-color 0.15s ease-out; }
+.wizard input::placeholder { color: var(--muted); }
+.wizard :is(input[type="text"], input[type="email"], input[type="password"],
+            input[type="number"]):focus-visible {
+  outline: none; border-color: var(--line-strong); }
+#avoid, #emailAddr, #imapPass { display: block; width: 100%; margin-top: 10px; }
+#customCap { width: 76px; padding: 2px 7px; font-size: 12.5px;
+             margin-right: 3px; }
+
+.wapppass { background: var(--surface); border: 1px solid var(--line);
+            border-radius: var(--radius); padding: 10px 12px; margin-top: 12px; }
+.wapppass summary { color: var(--text); font-size: 12.5px; cursor: pointer;
+                    transition: color 0.15s ease-out; }
+.wapppass summary:hover { color: var(--ink); }
+.wapppass ol { margin-top: 8px; padding-left: 18px; color: var(--muted);
+               font-size: 12.5px; }
+.wapppass li { margin-top: 5px; }
+.wapppass code { font-family: var(--mono); font-size: 12px; color: var(--ink); }
+.wapppass a { text-decoration: underline; text-underline-offset: 3px; }
+
+.wactions { display: flex; align-items: center; gap: 18px; margin-top: 26px;
+            padding-top: 22px; border-top: 1px solid var(--line); }
+#finish { padding: 8px 16px; font-size: 13.5px; }
+#skip { color: var(--muted); font-size: 12.5px; transition: color 0.15s ease-out; }
+#skip:hover { color: var(--ink); }
+.wnote { color: var(--muted); font-size: 12px; margin-top: 16px; max-width: 62ch; }
+.wnote a { color: var(--text); text-decoration: underline;
+           text-underline-offset: 3px; }
+
+.werr { margin-top: 14px; padding: 8px 12px; color: var(--err); font-size: 12.5px;
+        background: rgba(229, 130, 116, 0.07); border-radius: var(--radius);
+        border: 1px solid rgba(229, 130, 116, 0.4); }
+.werr[hidden] { display: none; }
+
+/* ---------- unconfigured strip + re-run gear (inbox) ----------
+   Amber, like every other "works, but partial" state in this shell. */
+#wizbanner { padding: 9px 28px; font-size: 12.5px;
+             background: rgba(216, 167, 92, 0.07);
+             border-bottom: 1px solid rgba(216, 167, 92, 0.35); }
+#wizbanner a { color: var(--warn); text-decoration: underline;
+               text-underline-offset: 3px; }
+#wizbanner a:hover { color: var(--ink); }
+/* icon-only deck button: square padding, and quieter than the worded ones */
+#prefs { padding: 5px 9px; font-size: 14px; line-height: 1.15; color: var(--muted); }
+#prefs:hover { color: var(--ink); }
+
+@media (max-width: 750px) {
+  body.wizard-body { padding: 0 18px 56px; }
+  .wizard { padding-top: 36px; }
+  #wizbanner { padding-left: 18px; padding-right: 18px; }
+}

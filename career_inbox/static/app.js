@@ -1358,6 +1358,18 @@ async function boot() {
   readHash();
   wire();
 
+  /* first-run wizard: the gear re-runs it, and an install still on the shipped
+     defaults says so once, above the fold — not silently ranking on nobody's
+     profile. Fire-and-forget: neither ever blocks the table load. */
+  document.getElementById("prefs").onclick = () => location.href = "/welcome.html";
+  fetch("/api/wizard/state").then(r => r.json()).then(s => {
+    if (s.configured) return;
+    const b = document.createElement("div");
+    b.id = "wizbanner";
+    b.innerHTML = 'Running on shared defaults — <a href="/welcome.html">answer 3 questions</a> to personalize your rankings.';
+    document.querySelector("header").after(b);
+  });
+
   // reflect restored filter state into the controls
   $("search").value = S.filters.q;
   if (S.page === "ats" && S.view === "map") S.view = "table";  // ATS is table-only
