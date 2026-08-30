@@ -361,10 +361,10 @@ footer .sep { padding: 0 8px; opacity: 0.55; }
     <p class="lede">Your resume, profile, config, and pipeline never leave the laptop. Resume files are
       gitignored, so <code>git add -A</code> cannot stage them even by accident.</p>
     <p class="lede">To be precise about what does leave: the feeds call the public job-board APIs to fetch
-      listings, and board requests carry the contact email you gave at setup in an honest User-Agent so
-      employers can reach you about traffic. Company logos load from Google's favicon service and the
-      office map loads OpenStreetMap tiles — both ordinary page requests. Your resume, profile, and
-      pipeline never leave the laptop.</p>
+      listings, and board requests carry an honest User-Agent — including the contact email you gave
+      at setup, if you gave one — so employers can reach you about traffic. Company logos load from
+      Google's favicon service and the office map loads OpenStreetMap tiles — both ordinary page
+      requests.</p>
   </div>
 </section>
 
