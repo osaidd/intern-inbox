@@ -1,0 +1,506 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<title>Intern Inbox — NYC/NJ internships, triaged on your laptop</title>
+<meta name="description" content="A local, private internship pipeline for students hunting NYC and NJ internships. Company job boards plus your own job-alert emails, triaged in one inbox that runs on your laptop. One paste to install.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Intern Inbox — NYC/NJ internships, triaged on your laptop">
+<meta property="og:description" content="Company job boards plus your own job-alert emails, in one inbox that runs on your laptop. One paste to install. No accounts, no analytics, nothing leaves your machine.">
+<meta property="og:image" content="https://osaidd.github.io/intern-inbox/social-card.png">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="640">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20100%20100'%3E%3Ctext%20y='.9em'%20font-size='90'%3E📥%3C/text%3E%3C/svg%3E">
+<style>
+/* Intern Inbox — landing page.
+   Same quiet-ledger palette as the app itself: near-black surfaces, off-white
+   ink, hairline rules, one green reserved for state. Dark-first; the light
+   scheme is the same two anchors inverted. No external requests. */
+:root {
+  color-scheme: dark;
+  --bg: #141416;
+  --surface: #1b1b1e;
+  --raised: #202024;
+  --line: rgba(255, 255, 255, 0.10);
+  --line-strong: rgba(255, 255, 255, 0.18);
+  --ink: #f0efec;
+  --text: #c6c5c1;
+  --muted: #8f8e8a;
+  --ok: #7fc484;
+  --rule: rgba(255, 255, 255, 0.38);
+  --sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --radius: 6px;
+  --page: 880px;
+  --pad: clamp(20px, 5vw, 32px);
+  --rhythm: clamp(52px, 8vw, 88px);
+  --lh: 1.7;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    color-scheme: light;
+    --bg: #f0efec;
+    --surface: #e9e8e4;
+    --raised: #e3e1dc;
+    --line: rgba(0, 0, 0, 0.12);
+    --line-strong: rgba(0, 0, 0, 0.26);
+    --ink: #141416;
+    --text: #4a4945;
+    --muted: #67665f;
+    --ok: #26682f;
+    --rule: rgba(0, 0, 0, 0.34);
+    --lh: 1.65;
+  }
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+body, h1, h2, h3, p, ol, ul, dl, dd, figure, blockquote { margin: 0; }
+ol, ul { padding: 0; list-style: none; }
+html { background: var(--bg); -webkit-text-size-adjust: 100%; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 15.5px;
+  line-height: var(--lh);
+  -webkit-font-smoothing: antialiased;
+  overflow-wrap: break-word;
+}
+a { color: var(--ink); text-decoration: underline; text-decoration-color: var(--rule);
+    text-underline-offset: 3px; transition: text-decoration-color 0.15s ease-out; }
+a:hover { text-decoration-color: currentColor; }
+:is(a, button):focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; border-radius: 2px; }
+::selection { background: rgba(127, 196, 132, 0.28); }
+img { max-width: 100%; height: auto; }
+strong, b { color: var(--ink); font-weight: 600; }
+code, kbd { font-family: var(--mono); }
+
+.wrap { max-width: var(--page); margin: 0 auto; padding: 0 var(--pad); }
+
+h1, h2, h3 { color: var(--ink); text-wrap: balance; letter-spacing: -0.02em; }
+h1 {
+  font-size: clamp(2.4rem, 1.62rem + 3.3vw, 4rem);
+  font-weight: 600;
+  line-height: 1.04;
+  letter-spacing: -0.028em;
+}
+h2 { font-size: clamp(1.4rem, 1.22rem + 0.75vw, 1.8rem); font-weight: 600; line-height: 1.22; }
+h3 { font-size: 1.0625rem; font-weight: 600; line-height: 1.4; letter-spacing: -0.012em; }
+p { text-wrap: pretty; max-width: 68ch; }
+
+/* ---------- hero ---------- */
+.hero { padding: clamp(48px, 9vw, 96px) 0 clamp(34px, 5.5vw, 56px); }
+.hero .deck {
+  color: var(--ink);
+  font-size: clamp(1.1rem, 1rem + 0.5vw, 1.4rem);
+  line-height: 1.42;
+  letter-spacing: -0.012em;
+  margin-top: clamp(16px, 2.4vw, 22px);
+  max-width: 32ch;
+  text-wrap: balance;
+}
+.hero .scope { margin-top: 14px; color: var(--text); max-width: 58ch; }
+
+figure { margin: clamp(28px, 4.5vw, 40px) 0 0; }
+figure img { display: block; width: 100%; border: 1px solid var(--line); border-radius: var(--radius); }
+figcaption { margin-top: 12px; color: var(--muted); font-size: 13.5px; line-height: 1.55; max-width: 62ch; }
+
+/* ---------- paste commands ---------- */
+/* minmax(0, 1fr) everywhere a pre-formatted command lives: without it the
+   command's min-content width blows the track past the viewport. */
+.pastes { margin-top: clamp(28px, 4.5vw, 40px); display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+.paste { min-width: 0; background: var(--raised); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; }
+.paste-os {
+  display: block;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.3;
+  margin-bottom: 9px;
+}
+.paste-os b { color: var(--text); font-weight: 600; }
+.paste-row { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.cmd {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: block;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  color: var(--ink);
+  font-size: 12.5px;
+  line-height: 1.65;
+  white-space: pre;
+  padding-bottom: 2px;
+}
+.cmd .prompt { color: var(--muted); user-select: none; -webkit-user-select: none; margin-right: 0.85ch; }
+.copy {
+  flex: 0 0 auto;
+  min-width: 5.5rem;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  background: none;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: color 0.15s ease-out, border-color 0.15s ease-out, background-color 0.15s ease-out;
+}
+.copy:hover { color: var(--ink); border-color: var(--ink); background: var(--surface); }
+.copy[data-state="done"], .copy[data-state="done"]:hover { color: var(--ok); border-color: var(--ok); background: none; }
+.paste-hint { display: block; margin-top: 9px; color: var(--muted); font-size: 12.5px; }
+.paste-hint[hidden] { display: none; }
+.hero-note { margin-top: 18px; color: var(--muted); font-size: 14px; }
+
+/* ---------- sections ---------- */
+section { border-top: 1px solid var(--line); padding: var(--rhythm) 0; }
+.lede { margin-top: 15px; }
+.lede + .lede { margin-top: 19px; }
+
+/* how it works — a real sequence, so the numbers mean something */
+.steps { margin-top: clamp(24px, 3.5vw, 34px); }
+.steps li { display: grid; grid-template-columns: 2.25rem minmax(0, 1fr); gap: 0 4px; padding: 22px 0; border-top: 1px solid var(--line); }
+.steps li:first-child { border-top: 0; padding-top: 4px; }
+.steps .n { color: var(--muted); font-family: var(--mono); font-size: 13px; font-variant-numeric: tabular-nums; line-height: 1.75; }
+.steps p { margin-top: 8px; }
+.steps .aside { margin-top: 8px; color: var(--muted); font-size: 14px; }
+
+/* what it pulls — ledger rows, not cards */
+.sources { margin-top: clamp(24px, 3.5vw, 34px); display: grid; grid-template-columns: minmax(0, 15rem) minmax(0, 1fr); }
+.sources dt { color: var(--ink); font-weight: 600; padding: 15px 20px 15px 0; border-top: 1px solid var(--line); }
+.sources dd { margin: 0; padding: 15px 0; border-top: 1px solid var(--line); }
+.sources dt:first-of-type, .sources dt:first-of-type + dd { border-top: 0; }
+.sources .opt { color: var(--muted); font-weight: 400; }
+.after-sources { margin-top: 26px; }
+
+/* claude code — an aside, so it gets the one panel on the page */
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: clamp(20px, 3.4vw, 30px); }
+.panel h2 { font-size: clamp(1.25rem, 1.14rem + 0.45vw, 1.5rem); }
+.commands { margin-top: 22px; display: grid; gap: 13px; }
+.commands li { padding-left: 0; }
+.commands code { color: var(--ink); font-size: 13.5px; font-weight: 500; }
+.commands span { color: var(--text); }
+.panel .close { margin-top: 22px; color: var(--muted); font-size: 14px; }
+
+/* faq */
+.faq { margin-top: clamp(20px, 3vw, 28px); }
+.faq > div { padding: 24px 0; border-top: 1px solid var(--line); }
+.faq > div:first-child { border-top: 0; }
+.faq p { margin-top: 9px; }
+.faq p + p { margin-top: 12px; }
+
+/* footer */
+footer { border-top: 1px solid var(--line); padding: 30px 0 clamp(44px, 7vw, 72px); color: var(--muted); font-size: 14px; }
+footer p { max-width: none; }
+footer .meta { margin-top: 7px; }
+footer .sep { padding: 0 8px; opacity: 0.55; }
+
+.vh { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+
+/* ---------- narrow ---------- */
+/* The paste row stacks as soon as the command stops fitting beside the button —
+   a command clipped by two characters reads as a bug, not as a scroll box. */
+@media (max-width: 880px) {
+  .paste-row { flex-direction: column; align-items: stretch; gap: 12px; }
+  .cmd { max-width: 100%; }
+  .copy { width: 100%; padding: 10px 14px; }
+}
+@media (max-width: 640px) {
+  body { font-size: 15px; }
+  .hero .deck { max-width: none; }
+  .steps li { grid-template-columns: 1.75rem minmax(0, 1fr); }
+  .sources { grid-template-columns: minmax(0, 1fr); }
+  .sources dt { padding: 16px 0 0; }
+  .sources dd { padding: 4px 0 16px; border-top: 0; }
+  .sources dt:first-of-type + dd { border-top: 0; }
+  footer .meta span { display: block; }
+  footer .meta .sep { display: none; }
+}
+
+/* ---------- motion ---------- */
+@media (prefers-reduced-motion: no-preference) {
+  .hero > .wrap > * { animation: rise 0.55s var(--ease) both; }
+  .hero > .wrap > *:nth-child(2) { animation-delay: 0.05s; }
+  .hero > .wrap > *:nth-child(3) { animation-delay: 0.1s; }
+  .hero > .wrap > *:nth-child(4) { animation-delay: 0.15s; }
+  .hero > .wrap > *:nth-child(5) { animation-delay: 0.2s; }
+  .hero > .wrap > *:nth-child(6) { animation-delay: 0.25s; }
+  @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <h1>Intern Inbox</h1>
+    <p class="deck">Every NYC &amp; NJ internship, in one inbox on your laptop.</p>
+    <p class="scope">Internships only, New York City and New Jersey only — everything else is dropped
+      before it reaches you. Company job boards and your own job-alert emails land in one list that
+      runs on your machine and nowhere else.</p>
+
+    <figure>
+      <img src="demo.gif" alt="The Intern Inbox app: a dark table of NYC internship listings being worked through row by row — hearted, killed, moved to applied — then the ATS boards tab, grouped by company." width="1280" height="800" loading="lazy" decoding="async">
+      <figcaption>The daily loop: press Check now, then heart, kill, or mark applied down the list.</figcaption>
+    </figure>
+
+    <div class="pastes">
+      <div class="paste">
+        <span class="paste-os"><b>macOS</b> — paste into Terminal</span>
+        <div class="paste-row">
+          <code class="cmd"><span class="prompt" aria-hidden="true">$</span><span id="cmd-mac">curl -LsSf https://raw.githubusercontent.com/osaidd/intern-inbox/main/bootstrap.sh | sh</span></code>
+          <button type="button" class="copy" data-cmd="cmd-mac" data-hint="hint-mac">
+            <span class="copy-label" aria-live="polite">Copy</span>
+            <span class="vh"> the macOS install command</span>
+          </button>
+        </div>
+        <span class="paste-hint" id="hint-mac" hidden>Selected — press Cmd-C to copy.</span>
+      </div>
+
+      <div class="paste">
+        <span class="paste-os"><b>Windows</b> — paste into PowerShell</span>
+        <div class="paste-row">
+          <code class="cmd"><span class="prompt" aria-hidden="true">PS&gt;</span><span id="cmd-win">irm https://raw.githubusercontent.com/osaidd/intern-inbox/main/bootstrap.ps1 | iex</span></code>
+          <button type="button" class="copy" data-cmd="cmd-win" data-hint="hint-win">
+            <span class="copy-label" aria-live="polite">Copy</span>
+            <span class="vh"> the Windows install command</span>
+          </button>
+        </div>
+        <span class="paste-hint" id="hint-win" hidden>Selected — press Ctrl-C to copy.</span>
+      </div>
+    </div>
+
+    <p class="hero-note">Either paste ends with the app open in your browser. That's the whole install.</p>
+  </div>
+</header>
+
+<main>
+
+<section id="how">
+  <div class="wrap">
+    <h2>How it works</h2>
+    <p class="lede">Three things happen once, then one thing happens daily.</p>
+
+    <ol class="steps">
+      <li>
+        <span class="n" aria-hidden="true">1</span>
+        <div>
+          <h3>Paste one command</h3>
+          <p>It installs what is missing, downloads the project to <code>~/intern-inbox</code>, and starts it.
+            About a minute the first time, mostly downloading Python. It touches nothing else on your computer —
+            everything lands in that one folder.</p>
+          <p class="aside">Already have Claude Code? The same paste opens the project there instead.</p>
+        </div>
+      </li>
+      <li>
+        <span class="n" aria-hidden="true">2</span>
+        <div>
+          <h3>Answer 3 questions</h3>
+          <p>Which roles you want, how big a company you will consider, and — optional — a Gmail app password
+            so the app can read your job-alert emails. The size question is the one that does the work:
+            tell it 50 people max and bigger companies never reach you.</p>
+          <p class="aside">Sizes are confirmed as companies get enriched, so a company nobody has sized yet
+            is never dropped on a guess. Skip the email step and everything else still works.</p>
+        </div>
+      </li>
+      <li>
+        <span class="n" aria-hidden="true">3</span>
+        <div>
+          <h3>Triage daily</h3>
+          <p>Open the app, press <strong>Check now</strong>, and go down the new rows: heart the ones worth
+            applying to, X the ones that are not, move a row to <strong>Applied</strong> once you have applied.
+            That is the entire interface.</p>
+          <p class="aside">Job alerts take up to a day to start arriving. An empty email column on day one is
+            expected, not a broken install — the company boards fill the list meanwhile.</p>
+        </div>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<section id="sources">
+  <div class="wrap">
+    <h2>What it pulls</h2>
+    <p class="lede">Four sources, all of them narrowed to NYC and NJ internships before you see anything.</p>
+
+    <dl class="sources">
+      <dt>Ashby + Greenhouse boards</dt>
+      <dd>The shared list of NYC company job boards, swept once a day.</dd>
+
+      <dt>Your job-alert emails</dt>
+      <dd>LinkedIn, Built In, and Wellfound alerts, read out of your Gmail with an app password.</dd>
+
+      <dt>SimplifyJobs GitHub lists</dt>
+      <dd>The big public internship lists, checked for anything in range.</dd>
+
+      <dt>Indeed + Google <span class="opt">(optional)</span></dt>
+      <dd>Broader board search through JobSpy. Off by default; one command turns it on.</dd>
+    </dl>
+
+    <p class="after-sources">Job descriptions are saved alongside each listing, so search actually works and
+      most rows need no second tab.</p>
+
+    <figure>
+      <img src="screenshot.png" alt="The ATS boards tab, grouped by company: Loomcraft AI, Fernwave, Halyard Health AI and others, each showing its intern roles with priority, funding stage, headcount, work mode and hourly pay." width="1280" height="800" loading="lazy" decoding="async">
+      <figcaption>The ATS boards tab: internships pulled straight from company job boards, grouped by company,
+        with the stage and headcount that decide whether the company clears your size cap.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="private">
+  <div class="wrap">
+    <h2>Private by design</h2>
+    <p class="lede">Your data stays on your machine. The database is a SQLite file in the project folder,
+      the app runs on localhost, and there are no accounts and no analytics — there is nowhere to sign in
+      because there is no server to sign in to.</p>
+    <p class="lede">Your resume, profile, config, and pipeline never leave the laptop. Resume files are
+      gitignored, so <code>git add -A</code> cannot stage them even by accident.</p>
+    <p class="lede">To be precise about what does leave: the feeds call the public job-board APIs to fetch
+      listings, company logos load from Google's favicon service, and the office map loads OpenStreetMap
+      tiles. Those services see ordinary page requests. Nothing about you is sent anywhere.</p>
+  </div>
+</section>
+
+<section id="claude">
+  <div class="wrap">
+    <div class="panel">
+      <h2>Goes further with Claude Code</h2>
+      <p class="lede">Recommended, not required. The install, the setup questions, the feeds, and the inbox
+        all run without it. What it adds is depth: open the <code>intern-inbox</code> folder in
+        <a href="https://claude.com/claude-code">Claude Code</a> and four commands become available.</p>
+
+      <ul class="commands">
+        <li><code>/setup</code> <span>— reads your actual resume and rewrites your keywords and rankings from
+          it, which goes deeper than the starter bundles the wizard picks from checkboxes.</span></li>
+        <li><code>/opportunity-scan</code> <span>— a full sourcing sweep plus company enrichment, which is what
+          turns the priority column into real tiers.</span></li>
+        <li><code>/skills-gap</code> <span>— every stored job description read against your profile: what the
+          market wants, where you fall short, per-role fit briefs.</span></li>
+        <li><code>/pipeline-review</code> <span>— triage by talking: "kill 12", "applied to Ramp".</span></li>
+      </ul>
+
+      <p class="close">Without Claude Code you get the same inbox, sorted by the answers you gave the wizard.</p>
+    </div>
+  </div>
+</section>
+
+<section id="faq">
+  <div class="wrap">
+    <h2>Questions</h2>
+
+    <div class="faq">
+      <div>
+        <h3>Do I need Claude Code?</h3>
+        <p>No. The setup wizard, the feeds, and the inbox all run on their own. Claude Code adds depth — a
+          resume-derived profile, scans, gap reports — not access.</p>
+      </div>
+
+      <div>
+        <h3>Do I need to know how to code?</h3>
+        <p>No. You paste one line into a terminal once and answer three questions in a browser. After that it
+          is clicking: check, heart, kill, applied. The one command you will retype is <code>git pull</code>,
+          every week or so, to pick up company boards other students added.</p>
+      </div>
+
+      <div>
+        <h3>Does it work on Windows?</h3>
+        <p>Yes — the PowerShell script does the same work as the Mac one. Here is the honest part: it has been
+          read line by line but never run on a real Windows machine.</p>
+        <p>First Windows tester welcome. If it stops early, open an issue with whatever it printed and it gets
+          fixed.</p>
+      </div>
+
+      <div>
+        <h3>What about big companies?</h3>
+        <p>Hidden by default. Setup ships with a checkbox that hides big-name companies — Google, Goldman, Meta,
+          and about fifty more — and you uncheck it if you want them. Separately, you set the size cap: up to
+          ~50 people, ~100, ~500, any size, or a number you type.</p>
+        <p>Only companies confirmed bigger than your cap get dropped. A company nobody has sized yet stays in
+          the list rather than disappearing on a guess.</p>
+      </div>
+
+      <div>
+        <h3>Who made this?</h3>
+        <p>A student on the NOC New York program, for the cohort doing the same hunt. It is MIT-licensed and the
+          source is on <a href="https://github.com/osaidd/intern-inbox">GitHub</a>.</p>
+        <p>Found a company hiring on Ashby or Greenhouse that is not in the list? Add its board slug and open a
+          pull request — everyone else picks it up on the next <code>git pull</code>.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p><a href="https://github.com/osaidd/intern-inbox">github.com/osaidd/intern-inbox</a></p>
+    <p class="meta">
+      <span>MIT licensed.</span><span class="sep" aria-hidden="true">·</span><span>Built by a NOC New York student.</span>
+    </p>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var RESET = 2000;
+  var isMac = /Mac|iPhone|iPad/.test(navigator.userAgent || "");
+
+  function flash(btn, label, hint, state) {
+    var labelEl = btn.querySelector(".copy-label");
+    var hintEl = btn.dataset.hint ? document.getElementById(btn.dataset.hint) : null;
+    labelEl.textContent = label;
+    btn.dataset.state = state;
+    if (hintEl) { hintEl.hidden = !hint; }
+    clearTimeout(btn._t);
+    btn._t = setTimeout(function () {
+      labelEl.textContent = "Copy";
+      btn.removeAttribute("data-state");
+      if (hintEl) { hintEl.hidden = true; }
+    }, RESET);
+  }
+
+  function selectFallback(btn, node) {
+    try {
+      var range = document.createRange();
+      range.selectNodeContents(node);
+      var sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      var copied = false;
+      try { copied = document.execCommand("copy"); } catch (e) { copied = false; }
+      if (copied) { flash(btn, "Copied", false, "done"); }
+      else { flash(btn, "Selected", true, "sel"); }
+    } catch (e) {
+      flash(btn, "Select it", false, "sel");
+    }
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll(".copy"), function (btn) {
+    var node = document.getElementById(btn.dataset.cmd);
+    if (!node) { return; }
+    var hintEl = btn.dataset.hint ? document.getElementById(btn.dataset.hint) : null;
+    if (hintEl) { hintEl.textContent = "Selected — press " + (isMac ? "Cmd-C" : "Ctrl-C") + " to copy."; }
+
+    btn.addEventListener("click", function () {
+      var text = node.textContent;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(
+          function () { flash(btn, "Copied", false, "done"); },
+          function () { selectFallback(btn, node); }
+        );
+      } else {
+        selectFallback(btn, node);
+      }
+    });
+  });
+})();
+</script>
+
+</body>
+</html>
