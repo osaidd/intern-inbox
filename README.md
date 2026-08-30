@@ -31,6 +31,8 @@ Either paste installs what is missing, downloads the project to
 `~/intern-inbox`, and starts it. The three steps ask which roles you want, how
 big a company you will consider, and — optional — a Gmail app password so the
 app can read your job-alert emails. Answer them and the first pull runs.
+(Already have Claude Code? The paste opens the project there instead — see
+[SETUP.md](SETUP.md).)
 
 After that the loop is: open the app, press **Check now**, triage the new rows.
 Run `git pull` now and then to pick up boards other students added.

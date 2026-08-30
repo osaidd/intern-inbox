@@ -77,9 +77,11 @@ which is how the app knows a later re-run is yours to overwrite.
 
 Skipped the whole thing? You get the inbox on the shared defaults, plus a banner
 offering the three questions. The **⚙** button at the top right reopens the
-setup page any time, and re-running it just rewrites the same two files. If your
-config came from `/setup` in Claude Code instead of the wizard, re-running asks
-before replacing it.
+setup page any time. It comes up blank every time — the form starts from its
+defaults, not from your last answers — so re-pick your roles and your size cap
+before finishing: it writes exactly what is on screen. If your config came from
+`/setup` in Claude Code instead of the wizard, re-running asks before replacing
+it.
 
 ## 3. Gmail app password
 
@@ -94,12 +96,15 @@ it at any time. Your real Google password is never used or stored.
 4. In the **App name** box, type `intern-inbox`, then click **Create**.
 5. A yellow box shows a 16-character code in four groups. Copy it.
 6. Paste it into step 3 of the setup page, along with your Gmail address. The
-   spaces do not matter. Already past setup? Click **⚙** to reopen the page, or
-   put the code in `config/.env` by hand, spaces removed:
+   spaces do not matter. Already past setup? Put the code in `config/.env` by
+   hand instead, spaces removed:
 
    ```
    CAREER_IMAP_PASS=abcdefghijklmnop
    ```
+
+   The **⚙** button reopens the setup page, but it re-asks every question from
+   its defaults — editing that one line is less work.
 
 7. Click **Done** in Google.
 
@@ -314,9 +319,11 @@ unaffected.
 Expected. Your alerts have not been sent yet. Give it a day.
 
 **"CAREER_IMAP_PASS missing".**
-Step 3 of the setup page was skipped, or the code went into the wrong file. It
-belongs in `config/.env`, on its own line, no quotes, no spaces in the code.
-Click **⚙** in the app to fill it in through the setup page instead.
+Step 3 of the setup page was skipped, or the code went into the wrong file. Add
+it to `config/.env` by hand — its own line, no quotes, no spaces in the code —
+and restart the app. The **⚙** button gets you there too, but it re-runs the
+whole setup page from its defaults, so you would be re-picking your roles and
+size cap as well.
 
 **Nothing shows up at all.**
 Check the filters at the top of the list — the status dropdown may be on

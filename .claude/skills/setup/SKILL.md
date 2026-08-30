@@ -12,9 +12,10 @@ personal values into tracked files. Record start time (run_log needs it).
 If `config/career.toml` exists, say so and ask what to update (resume / roles /
 email / boards) — a file whose first line is `# written-by: intern-inbox-wizard`
 came from the in-app wizard, so treat those answers as a valid starting point
-and personalize on top of them. Do only that section, then re-run step 6, then
-step 7 (the run_log write is non-optional even for a partial update — name the
-updated section(s) in the summary, e.g. "updated: roles").
+and personalize on top of them. Do only that section — and whenever it rewrites
+`config/career.toml`, step 4's header-strip rule applies — then re-run step 6,
+then step 7 (the run_log write is non-optional even for a partial update — name
+the updated section(s) in the summary, e.g. "updated: roles").
 
 **Resume update** (the most common re-run — "new resume", "update my resume"):
 ask for the new PDF (dropped into the folder) or pasted text, re-derive the
@@ -22,8 +23,9 @@ profile keywords / target titles / background summary per step 2, then SHOW THE
 DIFF before writing: current vs new keyword and title lists, side by side, so
 the user sees exactly how their ranking will change. On approval, rewrite
 `profile/profile.md` and BOTH `[role]` and `[scoring]` blocks (step 4's
-keep-in-sync rule applies), remind them the resume file itself is gitignored
-and never leaves the machine, then step 6 + step 7 ("updated: resume").
+keep-in-sync and header-strip rules apply), remind them the resume file itself
+is gitignored and never leaves the machine, then step 6 + step 7
+("updated: resume").
 Suggest `/skills-gap` afterwards — the market report reads the new profile.
 
 ## Flow
@@ -58,7 +60,10 @@ Suggest `/skills-gap` afterwards — the market report reads the new profile.
 3. **Write `profile/profile.md`:** background summary, education, skills,
    experience bullets, the derived keyword/title lists. This file is what
    opportunity-scan and skills-gap read as "who the user is".
-4. **Write `config/career.toml`:** copy `config/career.example.toml`, then set
+4. **Write `config/career.toml`:** copy `config/career.example.toml` — FIRST RUN
+   ONLY; on an update run edit the existing `config/career.toml` in place, never
+   re-copy the example over it (that would reset their `[company]` size caps and
+   throw away the size choice they made in the wizard) — then set
    `[role]` profile_keywords/target_titles from step 2, extend
    exclude_companies with their dealbreaker companies, set `[email] to` and
    `smtp_user` to their address. Write `config/.env` scaffold:
