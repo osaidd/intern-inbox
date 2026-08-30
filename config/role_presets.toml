@@ -1,0 +1,28 @@
+# Curated starter bundles for the first-run wizard. Each maps role checkboxes to
+# the [role]/[scoring] keyword + title lists. /setup replaces these with
+# resume-derived lists; the wizard just unions the chosen bundles.
+
+[swe_ai]
+label = "Software / AI Engineering"
+profile_keywords = ["ai", "llm", "rag", "genai", "agent", "software", "backend", "frontend", "full stack", "python", "typescript", "infrastructure", "api"]
+target_titles = ["software engineering intern", "engineering intern", "ai engineer intern", "ai engineering intern", "machine learning intern", "backend intern", "full stack intern"]
+
+[product]
+label = "Product"
+profile_keywords = ["product", "roadmap", "user research", "prd", "analytics", "figma", "experimentation", "a/b"]
+target_titles = ["product manager intern", "product management intern", "product intern", "apm intern", "product analyst intern"]
+
+[data]
+label = "Data"
+profile_keywords = ["data", "sql", "python", "analytics", "dashboard", "etl", "pipeline", "statistics", "machine learning"]
+target_titles = ["data analyst intern", "data science intern", "data engineering intern", "analytics intern", "business intelligence intern"]
+
+[gtm_growth]
+label = "GTM / Growth / Marketing"
+profile_keywords = ["gtm", "growth", "marketing", "sales", "outbound", "content", "seo", "crm", "hubspot", "partnerships"]
+target_titles = ["growth intern", "marketing intern", "gtm intern", "sales intern", "business development intern", "partnerships intern"]
+
+[bizops]
+label = "BizOps / Operations / Finance"
+profile_keywords = ["operations", "bizops", "strategy", "finance", "fintech", "excel", "modeling", "process", "chief of staff"]
+target_titles = ["business operations intern", "operations intern", "bizops intern", "strategy intern", "finance intern", "founders associate", "chief of staff intern"]
