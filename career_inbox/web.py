@@ -18,7 +18,7 @@ from career_hunt.families import role_family  # noqa: E402
 from career_hunt.models import Job  # noqa: E402
 from career_hunt.store import get_or_create_company, insert_job  # noqa: E402
 from career_hunt.term import term  # noqa: E402
-from career_inbox import actions, pull  # noqa: E402
+from career_inbox import actions, pull, wizard  # noqa: E402
 from feeds.ats_pull import load_orgs  # noqa: E402
 from feeds.envfile import load_env  # noqa: E402
 
@@ -304,6 +304,39 @@ def pull_status():
 
 
 STATIC = Path(__file__).parent / "static"
+
+
+@app.get("/api/wizard/state")
+def wizard_state():
+    s = wizard.state()
+    s["presets"] = {k: {"label": v["label"]} for k, v in wizard.load_presets().items()}
+    s["sizes"] = list(wizard.SIZE_PRESETS)
+    return s
+
+
+@app.post("/api/wizard/complete")
+async def wizard_complete(request: Request):
+    _require_json(request)
+    body = await request.json()
+    force = bool(body.pop("force", False))
+    try:
+        return wizard.apply(body, force=force)
+    except wizard.WizardConflict as e:
+        raise HTTPException(409, str(e))
+    except (ValueError, TypeError, KeyError) as e:
+        raise HTTPException(422, str(e))
+
+
+@app.get("/")
+def root():
+    """Unconfigured installs land on the wizard, not a dashboard with no data."""
+    from fastapi.responses import FileResponse, RedirectResponse
+    if wizard.state()["configured"]:
+        return FileResponse(STATIC / "index.html")
+    return RedirectResponse("/welcome.html", status_code=302)
+
+
+# The catch-all static mount MUST stay last — it swallows every unmatched path.
 if STATIC.is_dir():
     from fastapi.staticfiles import StaticFiles
     app.mount("/", StaticFiles(directory=STATIC, html=True), name="static")
