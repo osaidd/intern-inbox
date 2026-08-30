@@ -20,6 +20,7 @@ class CompanyRules:
     tier2_stages: list
     tier2_max_headcount: int
     hard_cap_headcount: int
+    allow_late_stages: bool = False   # optional key: late-stage cos pass to tier logic
 
 
 @dataclass
@@ -77,7 +78,8 @@ def load(path=None) -> Config:
             tier1_max_headcount=c["tier1_max_headcount"],
             tier2_stages=[s.lower() for s in c["tier2_stages"]],
             tier2_max_headcount=c["tier2_max_headcount"],
-            hard_cap_headcount=c["hard_cap_headcount"]),
+            hard_cap_headcount=c["hard_cap_headcount"],
+            allow_late_stages=c.get("allow_late_stages", False)),
         location_tier1=[a.lower() for a in raw["location"]["tier1"]],
         location_tier2=[a.lower() for a in raw["location"]["tier2"]],
         profile_keywords=r["profile_keywords"],

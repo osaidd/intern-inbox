@@ -128,3 +128,18 @@ def test_exclude_companies_word_boundary():
     assert matches(_job(company="EY-Parthenon"), CFG) is False       # word-bounded by hyphen
     assert matches(_job(company="Palantir Technologies"), CFG) is False
     assert matches(_job(company="Jane Street Capital"), CFG) is False
+
+
+# ---- allow_late_stages config gate ------------------------------------------
+def test_late_stage_dead_by_default():
+    assert company_tier("series c", 40, CFG) == "dead"
+
+
+def test_allow_late_stages_lets_late_companies_through():
+    cfg = ch_config.load(ch_config.DEFAULT_PATH)
+    cfg.company.allow_late_stages = True
+    # late stage no longer auto-dead; falls through to tier lists -> unknown
+    assert company_tier("series c", 40, cfg) == "unknown"
+    # but the hard cap still applies regardless of stage
+    cfg.company.hard_cap_headcount = 100
+    assert company_tier("series c", 5000, cfg) == "dead"

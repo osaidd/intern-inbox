@@ -16,6 +16,9 @@ tier1_max_headcount = 100
 tier2_stages = ["series b"]
 tier2_max_headcount = 75
 hard_cap_headcount = 100
+# Late-stage companies (series c+, public, …) are auto-dead by default. The
+# first-run wizard's "Mid"/"Any size" choices set this true.
+# allow_late_stages = false
 
 [location]
 # tier1 = NYC proper (full priority); tier2 = NJ commute belt (kept, lower priority)

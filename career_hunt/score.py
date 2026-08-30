@@ -97,7 +97,7 @@ def company_tier(stage, headcount, cfg: Config) -> str:
     st = (stage or "unknown").lower()
     if headcount is not None and headcount >= cfg.company.hard_cap_headcount:
         return "dead"
-    if any(st.startswith(l) for l in LATE_STAGES):
+    if not cfg.company.allow_late_stages and any(st.startswith(l) for l in LATE_STAGES):
         return "dead"
     if st in cfg.company.tier1_stages:
         if headcount is None or headcount <= cfg.company.tier1_max_headcount:

@@ -24,3 +24,8 @@ def test_user_agent_reads_contact():
     ua = ch_config.user_agent(cfg)
     assert ua["User-Agent"] == ("intern-inbox (personal internship search; "
                                 "contact: student@example.com)")
+
+
+def test_allow_late_stages_defaults_false():
+    cfg = ch_config.load(ch_config.EXAMPLE_PATH)
+    assert cfg.company.allow_late_stages is False
