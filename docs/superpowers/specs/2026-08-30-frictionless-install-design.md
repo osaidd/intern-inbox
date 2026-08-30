@@ -41,8 +41,16 @@ gitignored career.toml (not a public change).
 - First-run wizard: when `config/career.toml` is absent, the inbox redirects
   to `/welcome` — three plain-language steps: (1) role types via checkboxes,
   mapped to curated keyword/title preset bundles in a tracked
-  `config/role_presets.toml`; (2) company filter — startups-only default vs.
-  show-everything, plus optional avoid list; (3) job-alert email, optional and
+  `config/role_presets.toml`; (2) company filter — the size gate
+  is the headline control: a plain-language radio group ("Tiny — up to ~50
+  people, pre-seed–Series A" / "Small — up to ~100, through Series B" /
+  "Mid — up to ~500" / "Any size") plus a custom-cap number input, writing the
+  existing `[company]` tier fields with their existing score.py semantics
+  (a company whose size is UNKNOWN is never auto-dead; only confirmed
+  over-cap dies). Alongside it: the startups-only vs. show-everything
+  blocklist toggle and an optional avoid list. A one-line accuracy note
+  explains sizes/stages are confirmed by enrichment and /opportunity-scan in
+  Claude Code is what upgrades accuracy; (3) job-alert email, optional and
   skippable — address + Gmail app password with the three Google steps inline.
   Finish writes `config/career.toml` (+ `config/.env` if given) — gitignored
   files ONLY — kicks off a first pull, lands on the inbox. "Skip for now"
@@ -107,7 +115,12 @@ via `gh api` during rollout.
 4. Repo README leads with a moving demo; landing page live at the Pages URL.
 5. No public file or copy references prior personal projects; broadened
    audience framing throughout.
-6. Owner's local pipeline (config, data, daily loop) is unchanged and working.
+6. Owner's local pipeline (config, data, daily loop) is unchanged and working —
+   his existing [company] caps (hard cap 75, Series B ≤50, confirmed-over-cap
+   auto-dead) already encode his size rule and are not touched.
+7. Company size is selectable in the wizard in plain language; every preset
+   maps faithfully onto score.py's existing tier semantics, verified by unit
+   tests per preset.
 
 ## Risks
 
