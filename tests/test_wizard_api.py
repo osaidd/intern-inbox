@@ -54,6 +54,14 @@ def test_complete_validates(client):
                        json=dict(BODY, size="custom")).status_code == 422
 
 
+def test_complete_rejects_unparseable_body(client):
+    """A truncated or non-object body is a client error, not a 500."""
+    r = client.post("/api/wizard/complete", content=b"{not json",
+                    headers={"content-type": "application/json"})
+    assert r.status_code == 422
+    assert client.post("/api/wizard/complete", json=["swe_ai"]).status_code == 422
+
+
 def test_complete_requires_json_content_type(client):
     r = client.post("/api/wizard/complete", content=b"x=1",
                     headers={"content-type": "application/x-www-form-urlencoded"})

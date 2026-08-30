@@ -317,9 +317,13 @@ def wizard_state():
 @app.post("/api/wizard/complete")
 async def wizard_complete(request: Request):
     _require_json(request)
-    body = await request.json()
-    force = bool(body.pop("force", False))
     try:
+        # parsing lives inside the try so a truncated or non-object body is a
+        # 422 like every other bad input, never an unhandled 500
+        body = await request.json()
+        if not isinstance(body, dict):
+            raise ValueError("expected a JSON object")
+        force = bool(body.pop("force", False))
         return wizard.apply(body, force=force)
     except wizard.WizardConflict as e:
         raise HTTPException(409, str(e))
