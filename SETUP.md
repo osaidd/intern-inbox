@@ -108,7 +108,8 @@ that is 2-Step Verification not being fully on yet. Go back to step 2.
 
 The app reads the address you typed on the setup page — it is saved as
 `CAREER_IMAP_USER` in `config/.env`. To read a different mailbox, change that
-line.
+line. If you never gave an address, add it yourself:
+`CAREER_IMAP_USER=you@gmail.com`.
 
 ## 4. Turn on job alerts
 
@@ -179,9 +180,8 @@ wizard: your keywords and rankings come out of your own resume instead of the
 five starter bundles. It also walks you through sections 3 and 4 and runs a
 first pull at the end.
 
-If you already answered the wizard, `/setup` sees the config and asks what you
-want to update instead of starting over — say "resume" and it rewrites your
-keywords and rankings, showing you the before/after before it writes anything.
+If you already answered the wizard, `/setup` sees that config and asks which
+part you want redone rather than starting over.
 
 Two things that trip people up:
 
@@ -200,10 +200,10 @@ Once you have a week of real rows, four more skills earn their keep:
 - **/add-opportunity** — paste a posting, a URL, or an alert email to file it.
 - **/pipeline-review** — triage by talking: "kill 12", "applied to Ramp".
 
-You can run `/setup` again any time — it asks what you want to update instead
-of starting over. The most useful re-run: say **"update my resume"** after you
-revise it, and your profile keywords and rankings follow the new version (you
-see the before/after diff first). The resume file stays on your machine.
+The re-run that matters most: say **"update my resume"** after you revise it,
+and your profile keywords and rankings follow the new version — you see the
+before/after diff before anything is written. The resume file stays on your
+machine.
 
 ## Appendix: doing it by hand
 

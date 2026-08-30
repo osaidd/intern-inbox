@@ -4,9 +4,10 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue)](https://www.python.org/downloads/)
 
-A local, private internship pipeline for students hunting **NYC/NJ
-internships**. Company job boards + your own job-alert emails, triaged in one
-inbox on your laptop. Built for and battle-tested by the NOC New York cohort.
+A local, private internship pipeline for students hunting
+**NYC/NJ internships**. Company job boards + your own job-alert emails, triaged
+in one inbox on your laptop. Built for and battle-tested by the NOC New York
+cohort.
 
 ![Triage in action](docs/demo.gif)
 
