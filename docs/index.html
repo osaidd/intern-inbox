@@ -50,9 +50,9 @@
     --line-strong: rgba(0, 0, 0, 0.26);
     --ink: #141416;
     --text: #4a4945;
-    --muted: #67665f;
+    --muted: #5f5e58;
     --ok: #26682f;
-    --rule: rgba(0, 0, 0, 0.34);
+    --rule: rgba(0, 0, 0, 0.46);
     --lh: 1.65;
   }
 }
@@ -285,7 +285,7 @@ footer .sep { padding: 0 8px; opacity: 0.55; }
     <h2>How it works</h2>
     <p class="lede">Three things happen once, then one thing happens daily.</p>
 
-    <ol class="steps">
+    <ol class="steps" role="list">
       <li>
         <span class="n" aria-hidden="true">1</span>
         <div>
@@ -374,7 +374,7 @@ footer .sep { padding: 0 8px; opacity: 0.55; }
         all run without it. What it adds is depth: open the <code>intern-inbox</code> folder in
         <a href="https://claude.com/claude-code">Claude Code</a> and four commands become available.</p>
 
-      <ul class="commands">
+      <ul class="commands" role="list">
         <li><code>/setup</code> <span>— reads your actual resume and rewrites your keywords and rankings from
           it, which goes deeper than the starter bundles the wizard picks from checkboxes.</span></li>
         <li><code>/opportunity-scan</code> <span>— a full sourcing sweep plus company enrichment, which is what
