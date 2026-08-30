@@ -39,6 +39,8 @@
   --rhythm: clamp(52px, 8vw, 88px);
   --lh: 1.7;
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --glow: rgba(127, 196, 132, 0.07);
+  --ok-ink: #10130f;
 }
 @media (prefers-color-scheme: light) {
   :root {
@@ -54,6 +56,8 @@
     --ok: #26682f;
     --rule: rgba(0, 0, 0, 0.46);
     --lh: 1.65;
+    --glow: rgba(38, 104, 47, 0.05);
+    --ok-ink: #f0efec;
   }
 }
 
@@ -83,17 +87,25 @@ code, kbd { font-family: var(--mono); }
 
 h1, h2, h3 { color: var(--ink); text-wrap: balance; letter-spacing: -0.02em; }
 h1 {
-  font-size: clamp(2.4rem, 1.62rem + 3.3vw, 4rem);
-  font-weight: 600;
-  line-height: 1.04;
-  letter-spacing: -0.028em;
+  font-size: clamp(2.6rem, 1.6rem + 4.2vw, 4.6rem);
+  font-weight: 650;
+  line-height: 1.02;
+  letter-spacing: -0.03em;
 }
 h2 { font-size: clamp(1.4rem, 1.22rem + 0.75vw, 1.8rem); font-weight: 600; line-height: 1.22; }
 h3 { font-size: 1.0625rem; font-weight: 600; line-height: 1.4; letter-spacing: -0.012em; }
 p { text-wrap: pretty; max-width: 68ch; }
 
 /* ---------- hero ---------- */
-.hero { padding: clamp(48px, 9vw, 96px) 0 clamp(34px, 5.5vw, 56px); }
+.hero {
+  padding: clamp(52px, 9.5vw, 104px) 0 clamp(34px, 5.5vw, 56px);
+  background:
+    radial-gradient(58rem 30rem at 18% -12%, var(--glow), transparent 62%),
+    radial-gradient(40rem 22rem at 88% -18%, var(--glow), transparent 58%);
+}
+.mark { display: inline-block; width: 0.34em; height: 0.34em; margin-right: 0.3em;
+  border-radius: 50%; background: var(--ok); vertical-align: 0.06em; }
+.deck .dot { color: var(--ok); }
 .hero .deck {
   color: var(--ink);
   font-size: clamp(1.1rem, 1rem + 0.5vw, 1.4rem);
@@ -105,8 +117,35 @@ p { text-wrap: pretty; max-width: 68ch; }
 }
 .hero .scope { margin-top: 14px; color: var(--text); max-width: 58ch; }
 
+.cta-row { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 18px; margin-top: clamp(22px, 3.4vw, 30px); }
+.btn-demo {
+  display: inline-block;
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--ok-ink);
+  background: var(--ok);
+  border: 0;
+  border-radius: var(--radius);
+  padding: 11px 20px;
+  text-decoration: none;
+  transition: filter 0.15s ease-out, transform 0.15s var(--ease);
+}
+.btn-demo:hover { filter: brightness(1.08); }
+.btn-demo:active { transform: translateY(1px); }
+.cta-row .or { color: var(--muted); font-size: 14px; }
+.cta-row .or a { color: var(--text); }
+
 figure { margin: clamp(28px, 4.5vw, 40px) 0 0; }
-figure img { display: block; width: 100%; border: 1px solid var(--line); border-radius: var(--radius); }
+.window { border: 1px solid var(--line-strong); border-radius: 10px; overflow: hidden;
+  background: var(--surface); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05); }
+.titlebar { display: flex; align-items: center; gap: 7px; padding: 9px 12px;
+  background: var(--raised); border-bottom: 1px solid var(--line); }
+.titlebar .tdot { width: 9px; height: 9px; border-radius: 50%; background: var(--line-strong); }
+.titlebar .tdot.live { background: var(--ok); }
+.titlebar .url { margin-left: 8px; color: var(--muted); font-family: var(--mono); font-size: 11.5px;
+  letter-spacing: 0.01em; user-select: none; -webkit-user-select: none; }
+.window img { display: block; width: 100%; border: 0; border-radius: 0; }
+figure > img { display: block; width: 100%; border: 1px solid var(--line); border-radius: var(--radius); }
 figcaption { margin-top: 12px; color: var(--muted); font-size: 13.5px; line-height: 1.55; max-width: 62ch; }
 
 /* ---------- paste commands ---------- */
@@ -150,7 +189,7 @@ figcaption { margin-top: 12px; color: var(--muted); font-size: 13.5px; line-heig
   cursor: pointer;
   transition: color 0.15s ease-out, border-color 0.15s ease-out, background-color 0.15s ease-out;
 }
-.copy:hover { color: var(--ink); border-color: var(--ink); background: var(--surface); }
+.copy:hover { color: var(--ink); border-color: var(--ok); background: var(--surface); }
 .copy[data-state="done"], .copy[data-state="done"]:hover { color: var(--ok); border-color: var(--ok); background: none; }
 .paste-hint { display: block; margin-top: 9px; color: var(--muted); font-size: 12.5px; }
 .paste-hint[hidden] { display: none; }
@@ -178,7 +217,8 @@ section { border-top: 1px solid var(--line); padding: var(--rhythm) 0; }
 .after-sources { margin-top: 26px; }
 
 /* claude code — an aside, so it gets the one panel on the page */
-.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: clamp(20px, 3.4vw, 30px); }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05); padding: clamp(22px, 3.6vw, 32px); }
 .panel h2 { font-size: clamp(1.25rem, 1.14rem + 0.45vw, 1.5rem); }
 .commands { margin-top: 22px; display: grid; gap: 13px; }
 .commands li { padding-left: 0; }
@@ -230,6 +270,8 @@ footer .sep { padding: 0 8px; opacity: 0.55; }
   .hero > .wrap > *:nth-child(5) { animation-delay: 0.2s; }
   .hero > .wrap > *:nth-child(6) { animation-delay: 0.25s; }
   @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  .mark { animation: breathe 2.6s ease-in-out infinite; }
+  @keyframes breathe { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
 }
 </style>
 </head>
@@ -237,24 +279,32 @@ footer .sep { padding: 0 8px; opacity: 0.55; }
 
 <header class="hero">
   <div class="wrap">
-    <h1>Intern Inbox</h1>
-    <p class="deck">Every NYC &amp; NJ internship, in one inbox on your laptop.</p>
+    <h1><span class="mark" aria-hidden="true"></span>Intern Inbox</h1>
+    <p class="deck">Every NYC &amp; NJ internship, in one inbox on your laptop<span class="dot" aria-hidden="true">.</span></p>
     <p class="scope">Internships only, New York City and New Jersey only — everything else is dropped
       before it reaches you. Company job boards and your own job-alert emails land in one list that
       runs on your machine and nowhere else.</p>
 
+    <div class="cta-row">
+      <a class="btn-demo" href="https://intern-inbox-demo.fly.dev">Try the live demo</a>
+      <span class="or">read-only, invented data, resets hourly — <a href="#install">or install your own below</a></span>
+    </div>
+
     <figure>
+      <div class="window">
+        <div class="titlebar" aria-hidden="true"><span class="tdot"></span><span class="tdot"></span><span class="tdot live"></span><span class="url">127.0.0.1:8477</span></div>
       <img src="demo.gif" alt="The Intern Inbox app: a dark table of NYC internship listings being worked through row by row — hearted, killed, moved to applied — then the ATS boards tab, grouped by company." width="1280" height="800" loading="lazy" decoding="async">
+      </div>
       <figcaption>The daily loop: press Check now, then heart, kill, or mark applied down the list.</figcaption>
     </figure>
 
-    <div class="pastes">
+    <div class="pastes" id="install">
       <div class="paste">
         <span class="paste-os"><b>macOS</b> — paste into Terminal</span>
         <div class="paste-row">
           <code class="cmd"><span class="prompt" aria-hidden="true">$</span><span id="cmd-mac">curl -LsSf https://raw.githubusercontent.com/osaidd/intern-inbox/main/bootstrap.sh | sh</span></code>
           <button type="button" class="copy" data-cmd="cmd-mac" data-hint="hint-mac">
-            <span class="copy-label" aria-live="polite">Copy</span>
+            <span class="copy-label">Copy</span>
             <span class="vh"> the macOS install command</span>
           </button>
         </div>
@@ -266,7 +316,7 @@ footer .sep { padding: 0 8px; opacity: 0.55; }
         <div class="paste-row">
           <code class="cmd"><span class="prompt" aria-hidden="true">PS&gt;</span><span id="cmd-win">irm https://raw.githubusercontent.com/osaidd/intern-inbox/main/bootstrap.ps1 | iex</span></code>
           <button type="button" class="copy" data-cmd="cmd-win" data-hint="hint-win">
-            <span class="copy-label" aria-live="polite">Copy</span>
+            <span class="copy-label">Copy</span>
             <span class="vh"> the Windows install command</span>
           </button>
         </div>
@@ -275,6 +325,7 @@ footer .sep { padding: 0 8px; opacity: 0.55; }
     </div>
 
     <p class="hero-note">Either paste ends with the app open in your browser. That's the whole install.</p>
+    <span class="vh" aria-live="polite" id="copy-status"></span>
   </div>
 </header>
 
@@ -442,7 +493,7 @@ footer .sep { padding: 0 8px; opacity: 0.55; }
 
 <footer>
   <div class="wrap">
-    <p><a href="https://github.com/osaidd/intern-inbox">github.com/osaidd/intern-inbox</a></p>
+    <p><a href="https://github.com/osaidd/intern-inbox">github.com/osaidd/intern-inbox</a><span class="sep" aria-hidden="true">·</span><a href="https://intern-inbox-demo.fly.dev">live demo</a></p>
     <p class="meta">
       <span>MIT licensed.</span><span class="sep" aria-hidden="true">·</span><span>Built by a NOC New York student.</span>
     </p>
@@ -454,10 +505,12 @@ footer .sep { padding: 0 8px; opacity: 0.55; }
   var RESET = 2000;
   var isMac = /Mac|iPhone|iPad/.test(navigator.userAgent || "");
 
+  var live = document.getElementById("copy-status");
   function flash(btn, label, hint, state) {
     var labelEl = btn.querySelector(".copy-label");
     var hintEl = btn.dataset.hint ? document.getElementById(btn.dataset.hint) : null;
     labelEl.textContent = label;
+    if (live) { live.textContent = label === "Copy" ? "" : label; }
     btn.dataset.state = state;
     if (hintEl) { hintEl.hidden = !hint; }
     clearTimeout(btn._t);
