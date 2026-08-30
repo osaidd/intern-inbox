@@ -38,9 +38,11 @@ printf '\nAll set. Two steps left:\n'
 printf '  1. Open the folder  %s  in Claude Code\n' "$DIR"
 printf '  2. Type  /setup  and follow the conversation\n'
 
-# zero-friction handoff: if the Claude Code CLI is on this machine, start it
-# in the project right now so steps 1 and 2 collapse into "type /setup"
+# zero-friction handoff: Claude Code if it's here, otherwise straight into the app
 if command -v claude >/dev/null 2>&1; then
   printf '\nFound Claude Code — opening the project in it now. Type /setup when it loads.\n'
   cd "$DIR" && exec claude
 fi
+printf '\nStarting Intern Inbox — your browser will open with a 3-step setup.\n'
+printf 'To stop: Ctrl+C.  To start again later:  cd %s && uv run intern-inbox --open\n\n' "$DIR"
+cd "$DIR" && exec uv run intern-inbox --open
