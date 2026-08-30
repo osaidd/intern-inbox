@@ -291,8 +291,8 @@ footer .sep { padding: 0 8px; opacity: 0.55; }
         <div>
           <h3>Paste one command</h3>
           <p>It installs what is missing, downloads the project to <code>~/intern-inbox</code>, and starts it.
-            About a minute the first time, mostly downloading Python. It touches nothing else on your computer —
-            everything lands in that one folder.</p>
+            About a minute the first time, mostly downloading Python. Apart from uv — the Python tool it
+            installs if you don't already have it — everything lands in that one folder.</p>
           <p class="aside">Already have Claude Code? The same paste opens the project there instead.</p>
         </div>
       </li>
@@ -361,8 +361,10 @@ footer .sep { padding: 0 8px; opacity: 0.55; }
     <p class="lede">Your resume, profile, config, and pipeline never leave the laptop. Resume files are
       gitignored, so <code>git add -A</code> cannot stage them even by accident.</p>
     <p class="lede">To be precise about what does leave: the feeds call the public job-board APIs to fetch
-      listings, company logos load from Google's favicon service, and the office map loads OpenStreetMap
-      tiles. Those services see ordinary page requests. Nothing about you is sent anywhere.</p>
+      listings, and board requests carry the contact email you gave at setup in an honest User-Agent so
+      employers can reach you about traffic. Company logos load from Google's favicon service and the
+      office map loads OpenStreetMap tiles — both ordinary page requests. Your resume, profile, and
+      pipeline never leave the laptop.</p>
   </div>
 </section>
 
@@ -372,7 +374,7 @@ footer .sep { padding: 0 8px; opacity: 0.55; }
       <h2>Goes further with Claude Code</h2>
       <p class="lede">Recommended, not required. The install, the setup questions, the feeds, and the inbox
         all run without it. What it adds is depth: open the <code>intern-inbox</code> folder in
-        <a href="https://claude.com/claude-code">Claude Code</a> and four commands become available.</p>
+        <a href="https://claude.com/claude-code">Claude Code</a> and five commands become available.</p>
 
       <ul class="commands" role="list">
         <li><code>/setup</code> <span>— reads your actual resume and rewrites your keywords and rankings from
@@ -381,6 +383,7 @@ footer .sep { padding: 0 8px; opacity: 0.55; }
           turns the priority column into real tiers.</span></li>
         <li><code>/skills-gap</code> <span>— every stored job description read against your profile: what the
           market wants, where you fall short, per-role fit briefs.</span></li>
+        <li><code>/add-opportunity</code> <span>— paste any posting, URL, or alert email to file it.</span></li>
         <li><code>/pipeline-review</code> <span>— triage by talking: "kill 12", "applied to Ramp".</span></li>
       </ul>
 
@@ -420,7 +423,7 @@ footer .sep { padding: 0 8px; opacity: 0.55; }
         <p>Hidden by default. Setup ships with a checkbox that hides big-name companies — Google, Goldman, Meta,
           and about fifty more — and you uncheck it if you want them. Separately, you set the size cap: up to
           ~50 people, ~100, ~500, any size, or a number you type.</p>
-        <p>Only companies confirmed bigger than your cap get dropped. A company nobody has sized yet stays in
+        <p>Only companies confirmed at or over your cap get dropped. A company nobody has sized yet stays in
           the list rather than disappearing on a guess.</p>
       </div>
 
