@@ -165,15 +165,21 @@ async function loadMeta() {
 }
 
 /* The public demo says so above the fold, once — loadMeta() runs on every
-   refresh, so the id check is what keeps it to a single strip. */
+   refresh, so the id check is what keeps it to a single strip. The two controls
+   the server answers 403 to are hidden rather than left to fail on click; the
+   gear stays, since the wizard page loads and only its submit is blocked. */
 function demoBanner() {
   if (!(S.meta && S.meta.demo) || document.getElementById("demobanner")) return;
   const header = document.querySelector("header");
   if (!header) return;
+  for (const id of ["checkNow", "emailSaved"]) {
+    const el = $(id);
+    if (el) el.style.display = "none";
+  }
   const b = document.createElement("div");
   b.id = "demobanner";
-  b.innerHTML = 'Invented demo data — resets every hour. ' +
-    '<a href="https://osaidd.github.io/intern-inbox/">Get your own inbox →</a>';
+  b.innerHTML = 'Invented demo data on a public read-mostly instance — ' +
+    '<a href="https://osaidd.github.io/intern-inbox/">get your own inbox →</a>';
   header.after(b);
 }
 

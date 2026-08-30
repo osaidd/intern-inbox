@@ -22,8 +22,11 @@ This is the point of the demo mode, so it is worth being blunt about:
   mail), `POST /api/wizard/complete` (writing config), and `POST /api/add`
   (external ingestion). The 30-minute background auto-check does not start
   either, so the demo cannot reach out to the network at all.
+- The front end hides the two controls that would only ever 403 — **Check now**
+  and **Email ♥** — so a visitor's first click cannot land on an error. The gear
+  stays: the wizard page loads fine, and only its submit is blocked.
 - Status, note, and bulk stay **live** on purpose. Hearting and killing rows is
-  the thing people came to try, and the hourly reset undoes it.
+  the thing people came to try, and the reset undoes it.
 
 ## Deploy (owner, three commands)
 
@@ -63,7 +66,29 @@ re-runs the migrations, and re-seeds the same fifteen rows. Then it `exec`s the
 normal server on port 8477.
 
 A cold start after scale-to-zero re-seeds too, since the machine comes up with a
-fresh filesystem. Either way, whatever a visitor did is gone within the hour.
+fresh filesystem — so in practice a visitor's triage often disappears sooner
+than an hour, never later. That is why the banner says "read-mostly instance"
+rather than promising a schedule.
+
+## Troubleshooting a deploy
+
+**`uv sync --frozen` fails during `fly deploy` — "the lockfile is not
+up-to-date", "would require re-resolving", or a Python version complaint.**
+`uv.lock` is generated and CI-tested on Python 3.14, and the Dockerfile builds
+on `ghcr.io/astral-sh/uv:python3.14-bookworm-slim` to match — `--frozen`
+forbids re-resolving, so any drift between the lock and the build interpreter
+is a hard build failure rather than a silent re-resolve. If it happens, the lock
+has drifted from `pyproject.toml`: run `uv lock` locally, commit the updated
+`uv.lock`, and redeploy. Do not "fix" it by dropping `--frozen`, which just
+moves the problem to a machine you are not watching.
+
+**The app starts but every request returns 400.** The Host header is being
+rejected: `INTERN_INBOX_DEMO=1` must be set, since that is what widens the
+`TrustedHostMiddleware` allowlist beyond localhost. Check `fly ssh console -C env`.
+
+**The table is empty.** The seed step failed. `fly logs` will show it — the most
+likely cause is `seed_demo.py` refusing because `data/inbox.db` still had rows,
+which means the reseed's `rm` did not run.
 
 ## Cost
 

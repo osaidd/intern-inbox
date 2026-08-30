@@ -1,7 +1,10 @@
 # Image for the PUBLIC DEMO ONLY (intern-inbox-demo.fly.dev) — see docs/DEMO.md.
 # A normal install is `uv run intern-inbox`; nothing here is needed for that, and
 # no personal file ever enters this image (see .dockerignore).
-FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
+# Python 3.14 on purpose: uv.lock is generated and CI-tested on 3.14, and the
+# build below runs `uv sync --frozen`, which forbids re-resolving. Building on a
+# different interpreter is how you get a lockfile that cannot be satisfied.
+FROM ghcr.io/astral-sh/uv:python3.14-bookworm-slim
 
 WORKDIR /app
 COPY . .
