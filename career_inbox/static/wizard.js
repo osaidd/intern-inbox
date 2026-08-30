@@ -36,11 +36,13 @@ function choices() {
 
 /* A click on the number field does NOT tick its own radio — labels ignore
    clicks on interactive descendants — so a typed cap whose option was never
-   selected would be silently discarded on finish. Reaching for it is intent. */
-for (const ev of ["focus", "input"])
-  $("customCap").addEventListener(ev, () => {
-    document.querySelector('input[name="size"][value="custom"]').checked = true;
-  });
+   selected would be silently discarded on finish. Typing is the intent signal,
+   never focus: the radio group is one tab stop and this field is the next, so
+   a focus handler would rewrite a deliberate size choice on plain tab-through.
+   Typing, pasting, and the spinner arrows all fire input. */
+$("customCap").addEventListener("input", () => {
+  document.querySelector('input[name="size"][value="custom"]').checked = true;
+});
 
 $("finish").addEventListener("click", async () => {
   const c = choices();
