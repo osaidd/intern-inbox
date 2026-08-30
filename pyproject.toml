@@ -1,7 +1,7 @@
 [project]
 name = "intern-inbox"
 version = "0.1.0"
-description = "NYC/NJ internship pipeline for NOC students — ATS boards, job-alert email parsing, and a local triage inbox"
+description = "Local internship pipeline for NYC/NJ-hunting students — ATS boards, job-alert email parsing, and a triage inbox"
 requires-python = ">=3.12"
 license = "MIT"
 dependencies = [

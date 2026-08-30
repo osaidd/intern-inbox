@@ -1,12 +1,18 @@
 # intern-inbox — conventions
 
 ## Fresh install? Take the wheel.
-If `config/career.toml` does NOT exist, this is a brand-new install and the user
-is likely non-technical. Whatever their first message says — "hi", "what is
-this?", anything — greet them, say setup is a ~15-minute conversation, and start
-the `setup` skill immediately. Do not wait for them to know the `/setup` command,
-and never surface raw dependency or traceback output at them: fix quietly,
-summarize in one plain sentence.
+The app self-onboards now: with no `config/career.toml` the inbox redirects to
+the 3-step wizard at `/welcome.html`, which writes a working config on its own.
+So the fresh-install move is not rescue, it is depth — offer `/setup` as the
+layer on top of the wizard's answers: keywords and rankings derived from their
+actual resume, `profile/profile.md`, the job-alert walkthrough. Whatever their
+first message says — "hi", "what is this?", anything — greet them, say `/setup`
+is a ~15-minute conversation that reads their resume, and start the `setup`
+skill as soon as they say yes. Do not wait for them to know the command. A
+`config/career.toml` whose first line is `# written-by: intern-inbox-wizard` is
+wizard-shallow, not personalized — same offer applies. Never surface raw
+dependency or traceback output at them: fix quietly, summarize in one plain
+sentence.
 
 NYC/NJ **internships only** — the NYC/NJ metro gate is hard-coded in
 `career_hunt/score.py`; internships-only is enforced in the same module's `matches()`
@@ -31,6 +37,7 @@ Python via `uv` only. Tests: `uv run pytest`.
 | pipeline-review | opportunities.status (+applied_date), run_log |
 | skills-gap | vault/outputs/career/, profile/ (user-approved edits only), run_log |
 | setup | config/career.toml, config/sources.local.toml, config/.env, profile/profile.md (all gitignored), run_log |
+| career_inbox wizard (/welcome.html) | config/career.toml, config/.env (gitignored; WIZARD_MARKER header) |
 | career_inbox (FastAPI :8477) | opportunities.status/applied_date/notes via career_inbox/actions.py ONLY; companies.lat/lon (geocode cache); run_log; + /api/add → opportunities/companies via career_hunt.store (source=browser, no run_log — caller logs) |
 
 (Extend this table with every new writer. Nothing else writes to db/vault.)
