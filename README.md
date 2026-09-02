@@ -4,10 +4,8 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue)](https://www.python.org/downloads/)
 
-A local, private internship pipeline for students hunting
-**NYC/NJ internships**. Company job boards + your own job-alert emails, triaged
-in one inbox on your laptop. Built for and battle-tested by the NOC New York
-cohort.
+A local, private internship pipeline for **NYC/NJ internships**. Company job
+boards + your own job-alert emails, triaged in one inbox on your laptop.
 
 ![Triage in action](docs/demo.gif)
 
@@ -35,7 +33,7 @@ app can read your job-alert emails. Answer them and the first pull runs.
 [SETUP.md](SETUP.md).)
 
 After that the loop is: open the app, press **Check now**, triage the new rows.
-Run `git pull` now and then to pick up boards other students added.
+Run `git pull` now and then to pick up boards others have added.
 
 The Windows script has been read line by line but never run on a real Windows
 machine. First Windows tester welcome: if it stops early, open an issue with
