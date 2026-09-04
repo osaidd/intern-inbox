@@ -101,6 +101,7 @@ PRIORITY_RANK = ("CASE o.priority WHEN 'high' THEN 0 WHEN 'medium' THEN 1 "
 JOB_COLS = ("o.id, o.company_id, o.company, o.role, o.url, o.location, o.priority, o.status, "
             "o.source, o.score, o.salary_text, o.work_mode, o.office_area, o.discovered_date, "
             "o.posted_date, o.last_seen, o.applied_date, o.notes, "
+            "o.next_action_date, o.next_action_note, "
             "length(o.jd_text) AS jd_len, c.stage, c.headcount, c.sector, "
             "c.website, c.enrich_status, c.lat, c.lon")
 
@@ -189,6 +190,11 @@ def meta():
                             "AND status='ok' ORDER BY started_at DESC, id DESC LIMIT 1")
         sug_open = conn.execute("SELECT COUNT(*) AS n FROM suggestions "
                                 "WHERE status='open'").fetchone()["n"]
+        due = _rows(conn, "SELECT id, company, role, next_action_date, "
+                          "next_action_note FROM opportunities "
+                          f"WHERE status IN ({marks}) AND next_action_date IS NOT NULL "
+                          "AND next_action_date <= date('now', 'localtime') "
+                          "ORDER BY next_action_date, id LIMIT 20", LIVE)
         mail_last = _rows(conn, "SELECT started_at, status, summary FROM run_log "
                                 "WHERE skill='mail-scan' "
                                 "ORDER BY started_at DESC, id DESC LIMIT 1")
@@ -219,6 +225,7 @@ def meta():
            "ats": ats,
            "mail_scan": {"state": mail_state,
                          "last": mail_last[0] if mail_last else None},
+           "due": due,
            "last_check": last[0] if last else None}
     if DEMO:
         out["demo"] = True      # the front end's cue to raise the demo banner
@@ -323,6 +330,37 @@ def post_dismiss_suggestion(sug_id: int, request: Request):
         return actions.dismiss_suggestion(sug_id)
     except ValueError as e:
         raise _suggestion_error(e)
+
+
+class EditBody(BaseModel):
+    company: str | None = Field(None, max_length=200)
+    role: str | None = Field(None, max_length=300)
+    url: str | None = Field(None, max_length=2000)
+    location: str | None = Field(None, max_length=200)
+    salary_text: str | None = Field(None, max_length=200)
+    posted_date: str | None = Field(None, max_length=32)
+
+
+@app.post("/api/jobs/{job_id}/edit")
+def post_edit(job_id: int, body: EditBody):
+    """Field corrections; only keys actually sent are touched ('' clears)."""
+    try:
+        return actions.edit_job(job_id, body.model_dump(exclude_unset=True))
+    except ValueError as e:
+        raise HTTPException(404 if "no opportunity" in str(e) else 422, str(e))
+
+
+class NextActionBody(BaseModel):
+    date: str | None = Field(None, max_length=10)
+    note: str = Field("", max_length=200)
+
+
+@app.post("/api/jobs/{job_id}/next-action")
+def post_next_action(job_id: int, body: NextActionBody):
+    try:
+        return actions.set_next_action(job_id, body.date or None, body.note)
+    except ValueError as e:
+        raise HTTPException(404 if "no opportunity" in str(e) else 422, str(e))
 
 
 class ContactBody(BaseModel):

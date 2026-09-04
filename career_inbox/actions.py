@@ -1,9 +1,11 @@
 """THE write surface of career-inbox. CLAUDE.md contract: this module may UPDATE
-exactly opportunities.status / applied_date / notes — and, since migration 007,
-APPEND stage_events (on every real status change), contact_events (manual log),
-company_domains (user add + accept-time learning), and resolve suggestions.
-Nothing else, ever. The mail-scan feed never calls in here; a suggestion only
-becomes a status change when the user accepts it (accept_suggestion)."""
+opportunities.status / applied_date / notes / next_action_* — plus, via
+edit_job, the user-correctable row fields (company/role/url/location/
+salary_text/posted_date and their derived dedupe_hash/company_id/work_mode/
+priority/score) — and APPEND stage_events (on every real status change),
+contact_events (manual log), company_domains (user add + accept-time learning),
+and resolve suggestions. Nothing else, ever. The mail-scan feed never calls in
+here; a suggestion only becomes a status change when the user accepts it."""
 from datetime import date, datetime
 
 import db
@@ -101,6 +103,100 @@ def bulk(ids: list, action: str, *, source: str = "ui") -> int:
             _append_event(conn, job_id, row["status"], status, source=source)
         conn.commit()
         return n
+    finally:
+        conn.close()
+
+
+EDITABLE_FIELDS = ("company", "role", "url", "location", "salary_text",
+                   "posted_date")
+
+
+def edit_job(job_id: int, fields: dict) -> dict:
+    """User corrections to a row. Identity edits (company/role/url) recompute
+    dedupe_hash — colliding with another row raises instead of silently forking
+    — relink the company row, and refresh work_mode/priority/score so the
+    ranking stays honest. An edit never auto-buries a row (dead tier -> low)."""
+    from career_hunt import config as ch_config
+    from career_hunt.models import Job, dedupe_hash
+    from career_hunt.score import detect_work_mode
+    from career_hunt.score import priority as priority_fn
+    from career_hunt.store import get_or_create_company
+    from feeds.jobspy_pull import load_config as load_legacy_config
+    from feeds.jobspy_pull import score_job
+
+    unknown = set(fields) - set(EDITABLE_FIELDS)
+    if unknown:
+        raise ValueError(f"not editable: {', '.join(sorted(unknown))}")
+    if not fields:
+        raise ValueError("nothing to edit")
+    clean = {k: ((v or "").strip() or None) if isinstance(v, str) or v is None
+             else str(v).strip() or None for k, v in fields.items()}
+    conn = db.connect()
+    try:
+        row = _fetch(conn, job_id)
+        merged = {k: (clean[k] if k in clean else row[k]) for k in EDITABLE_FIELDS}
+        if not merged["company"] or not merged["role"]:
+            raise ValueError("company and role can't be blank")
+        if merged["url"] and not merged["url"].lower().startswith(
+                ("http://", "https://")):
+            raise ValueError("url must start with http(s)://")
+        if merged["posted_date"]:
+            merged["posted_date"] = merged["posted_date"][:10]
+            try:
+                date.fromisoformat(merged["posted_date"])
+            except ValueError:
+                raise ValueError("posted_date must be YYYY-MM-DD")
+        new_hash = dedupe_hash(merged["company"], merged["role"], merged["url"])
+        dup = conn.execute("SELECT id FROM opportunities WHERE dedupe_hash=? "
+                           "AND id != ?", (new_hash, job_id)).fetchone()
+        if dup:
+            raise ValueError(f"already tracked as row {dup['id']}")
+        company_id = row["company_id"]
+        if merged["company"] != row["company"] or company_id is None:
+            company_id = get_or_create_company(conn, merged["company"])
+        comp = None
+        if company_id:
+            c = conn.execute("SELECT stage, headcount FROM companies WHERE id=?",
+                             (company_id,)).fetchone()
+            comp = dict(c) if c else None
+        cfg = ch_config.load()
+        job = Job(company=merged["company"], role=merged["role"],
+                  url=merged["url"], location=merged["location"],
+                  jd_text=row["jd_text"], posted_date=merged["posted_date"],
+                  salary_text=merged["salary_text"])
+        pri = priority_fn(job, comp, cfg)
+        conn.execute(
+            "UPDATE opportunities SET company=?, role=?, url=?, location=?, "
+            "salary_text=?, posted_date=?, dedupe_hash=?, company_id=?, "
+            "work_mode=?, priority=?, score=? WHERE id=?",
+            (merged["company"], merged["role"], merged["url"], merged["location"],
+             merged["salary_text"], merged["posted_date"], new_hash, company_id,
+             detect_work_mode(merged["location"], row["jd_text"]),
+             "low" if pri == "dead" else pri,
+             score_job(merged["role"], row["jd_text"], merged["posted_date"],
+                       load_legacy_config()),
+             job_id))
+        conn.commit()
+        return _fetch(conn, job_id)
+    finally:
+        conn.close()
+
+
+def set_next_action(job_id: int, on: str | None, note: str = None) -> dict:
+    """Follow-up reminder: `on` is YYYY-MM-DD; None clears date and note both."""
+    if on is not None:
+        try:
+            date.fromisoformat(on)
+        except ValueError:
+            raise ValueError(f"invalid date {on!r} — use YYYY-MM-DD")
+    conn = db.connect()
+    try:
+        _fetch(conn, job_id)
+        clean_note = ((note or "").strip()[:200] or None) if on else None
+        conn.execute("UPDATE opportunities SET next_action_date=?, "
+                     "next_action_note=? WHERE id=?", (on, clean_note, job_id))
+        conn.commit()
+        return _fetch(conn, job_id)
     finally:
         conn.close()
 

@@ -457,6 +457,7 @@ button.linklike { background: none; border: none; padding: 0; cursor: pointer;
   color: var(--ok); font-size: 12.5px; text-decoration: underline;
   text-underline-offset: 3px; }
 button.linklike:hover { color: var(--ink); }
+.toast .toast-act { margin-left: 12px; font-weight: 600; }
 #sugbar .sug-foot { margin-left: auto; }
 #sugpanel { flex-basis: 100%; display: flex; flex-direction: column; gap: 6px;
   padding: 8px 0 4px; }
@@ -464,6 +465,25 @@ button.linklike:hover { color: var(--ink); }
 .sug-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .sug-ev { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis;
   white-space: nowrap; max-width: 46ch; }
+
+/* follow-up due strip — absent until something is due */
+#duebar { padding: 7px 28px; font-size: 12.5px; border-bottom: 1px solid var(--line);
+  display: flex; flex-direction: column; gap: 5px; }
+#duebar .due-head { color: var(--ink); font-weight: 500; }
+.due-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.due-what { color: var(--ink); }
+.due-note { overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  max-width: 40ch; }
+.d-edit-line { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
+.d-edit-line > .sub { flex: 0 0 110px; }
+.d-edit-line input { flex: 1; background: var(--surface);
+  border: 1px solid var(--line); border-radius: var(--radius);
+  color: var(--text); font-size: 12.5px; padding: 4px 8px; }
+.d-fu-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.d-fu-row input { background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius); color: var(--text); font-size: 12.5px;
+  padding: 4px 8px; }
+.d-fu-row input[type="date"] { color-scheme: dark; }
 
 /* last-touch sub-line + awaiting-reply nudge in the Age cell */
 .age .touch { white-space: nowrap; }

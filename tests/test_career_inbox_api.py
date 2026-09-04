@@ -172,6 +172,41 @@ def test_contact_log_and_last_touch(client):
     assert client.get("/api/jobs/99999/timeline").status_code == 404
 
 
+def test_edit_endpoint(client, monkeypatch):
+    from career_hunt import config as ch_config
+    from feeds import jobspy_pull
+    monkeypatch.setattr(ch_config, "USER_PATH", ch_config.CONFIG_DIR / "nope-x.toml")
+    monkeypatch.setattr(jobspy_pull, "USER_PATH", ch_config.CONFIG_DIR / "nope-x.toml")
+    jid = client.get("/api/jobs").json()["jobs"][0]["id"]
+    r = client.post(f"/api/jobs/{jid}/edit",
+                    json={"role": "ML Engineering Intern", "location": "Hoboken, NJ"})
+    assert r.status_code == 200
+    assert r.json()["role"] == "ML Engineering Intern"
+    assert r.json()["location"] == "Hoboken, NJ"
+    assert client.post(f"/api/jobs/{jid}/edit",
+                       json={"company": ""}).status_code == 422
+    assert client.post("/api/jobs/99999/edit",
+                       json={"role": "X"}).status_code == 404
+
+
+def test_next_action_and_due_strip(client):
+    jid = client.get("/api/jobs").json()["jobs"][0]["id"]
+    r = client.post(f"/api/jobs/{jid}/next-action",
+                    json={"date": "2020-01-01", "note": "follow up"})
+    assert r.status_code == 200 and r.json()["next_action_date"] == "2020-01-01"
+    j = next(x for x in client.get("/api/jobs").json()["jobs"] if x["id"] == jid)
+    assert j["next_action_date"] == "2020-01-01" and j["next_action_note"] == "follow up"
+    due = client.get("/api/meta").json()["due"]            # past date -> due now
+    assert [d["id"] for d in due] == [jid] and due[0]["next_action_note"] == "follow up"
+    r = client.post(f"/api/jobs/{jid}/next-action", json={"date": None})
+    assert r.json()["next_action_date"] is None
+    assert client.get("/api/meta").json()["due"] == []
+    assert client.post(f"/api/jobs/{jid}/next-action",
+                       json={"date": "soonish"}).status_code == 422
+    assert client.post("/api/jobs/99999/next-action",
+                       json={"date": "2026-09-12"}).status_code == 404
+
+
 def test_company_domain_endpoint(client):
     conn = db.connect()
     cid = conn.execute("SELECT id FROM companies").fetchone()["id"]
