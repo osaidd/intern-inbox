@@ -20,6 +20,7 @@ from career_hunt.models import Job  # noqa: E402
 from career_hunt.store import get_or_create_company, insert_job  # noqa: E402
 from career_hunt.term import term  # noqa: E402
 from career_inbox import actions, add_url, pull, update, wizard  # noqa: E402
+from feeds import mail_auth, outlook_auth  # noqa: E402
 from feeds.ats_pull import load_orgs  # noqa: E402
 from feeds.envfile import load_env  # noqa: E402
 
@@ -101,6 +102,7 @@ PRIORITY_RANK = ("CASE o.priority WHEN 'high' THEN 0 WHEN 'medium' THEN 1 "
 JOB_COLS = ("o.id, o.company_id, o.company, o.role, o.url, o.location, o.priority, o.status, "
             "o.source, o.score, o.salary_text, o.work_mode, o.office_area, o.discovered_date, "
             "o.posted_date, o.last_seen, o.applied_date, o.notes, "
+            "o.next_action_date, o.next_action_note, "
             "length(o.jd_text) AS jd_len, c.stage, c.headcount, c.sector, "
             "c.website, c.enrich_status, c.lat, c.lon")
 
@@ -189,6 +191,11 @@ def meta():
                             "AND status='ok' ORDER BY started_at DESC, id DESC LIMIT 1")
         sug_open = conn.execute("SELECT COUNT(*) AS n FROM suggestions "
                                 "WHERE status='open'").fetchone()["n"]
+        due = _rows(conn, "SELECT id, company, role, next_action_date, "
+                          "next_action_note FROM opportunities "
+                          f"WHERE status IN ({marks}) AND next_action_date IS NOT NULL "
+                          "AND next_action_date <= date('now', 'localtime') "
+                          "ORDER BY next_action_date, id LIMIT 20", LIVE)
         mail_last = _rows(conn, "SELECT started_at, status, summary FROM run_log "
                                 "WHERE skill='mail-scan' "
                                 "ORDER BY started_at DESC, id DESC LIMIT 1")
@@ -206,9 +213,11 @@ def meta():
         boards = 0
     ats = {"boards": boards, "last_sweep": sweep[0] if sweep else None}
     # reply-scan state for the consent banner + transparency footer: consent is
-    # the data/mail_scan_enabled marker, never implied by the alert-feed creds
+    # the data/mail_scan_enabled marker, never implied by working mail creds
     load_env()
-    if not os.environ.get("CAREER_IMAP_PASS"):
+    cfg_now = ch_config.load()
+    ready_ok, _reason = mail_auth.ready(cfg_now)
+    if not ready_ok:
         mail_state = "no-creds"
     else:
         mail_state = "on" if pull.MAIL_CONSENT.exists() else "off"
@@ -217,8 +226,9 @@ def meta():
            "stages": sorted({r["stage"] for r in live_rows if r["stage"]}),
            "sources": sorted({r["source"] for r in live_rows}),
            "ats": ats,
-           "mail_scan": {"state": mail_state,
+           "mail_scan": {"state": mail_state, "provider": cfg_now.mail_provider,
                          "last": mail_last[0] if mail_last else None},
+           "due": due,
            "last_check": last[0] if last else None}
     if DEMO:
         out["demo"] = True      # the front end's cue to raise the demo banner
@@ -325,6 +335,37 @@ def post_dismiss_suggestion(sug_id: int, request: Request):
         raise _suggestion_error(e)
 
 
+class EditBody(BaseModel):
+    company: str | None = Field(None, max_length=200)
+    role: str | None = Field(None, max_length=300)
+    url: str | None = Field(None, max_length=2000)
+    location: str | None = Field(None, max_length=200)
+    salary_text: str | None = Field(None, max_length=200)
+    posted_date: str | None = Field(None, max_length=32)
+
+
+@app.post("/api/jobs/{job_id}/edit")
+def post_edit(job_id: int, body: EditBody):
+    """Field corrections; only keys actually sent are touched ('' clears)."""
+    try:
+        return actions.edit_job(job_id, body.model_dump(exclude_unset=True))
+    except ValueError as e:
+        raise HTTPException(404 if "no opportunity" in str(e) else 422, str(e))
+
+
+class NextActionBody(BaseModel):
+    date: str | None = Field(None, max_length=10)
+    note: str = Field("", max_length=200)
+
+
+@app.post("/api/jobs/{job_id}/next-action")
+def post_next_action(job_id: int, body: NextActionBody):
+    try:
+        return actions.set_next_action(job_id, body.date or None, body.note)
+    except ValueError as e:
+        raise HTTPException(404 if "no opportunity" in str(e) else 422, str(e))
+
+
 class ContactBody(BaseModel):
     direction: str
     occurred_at: str | None = Field(None, max_length=32)
@@ -379,6 +420,51 @@ def timeline(job_id: int):
     events = sorted(stages + contacts, key=lambda e: e["occurred_at"] or "",
                     reverse=True)
     return {"events": events, "total": len(events)}
+
+
+# ---- Outlook device-code sign-in (feeds/outlook_auth; single-user flow) ----
+
+OUTLOOK_FLOW = {"device_code": None}
+
+
+@app.post("/api/outlook/start")
+async def outlook_start(request: Request):
+    _demo_block()
+    _require_json(request)
+    cid = outlook_auth.client_id(ch_config.load())
+    if not cid:
+        raise HTTPException(409, "Outlook needs a client id — set "
+                                 "[mail].outlook_client_id (see SETUP.md)")
+    try:
+        flow = await asyncio.to_thread(outlook_auth.start_device_flow, cid)
+    except RuntimeError as e:
+        raise HTTPException(502, str(e))
+    OUTLOOK_FLOW["device_code"] = flow["device_code"]
+    return {"user_code": flow["user_code"],
+            "verification_uri": flow.get("verification_uri",
+                                         "https://microsoft.com/devicelogin")}
+
+
+@app.post("/api/outlook/poll")
+async def outlook_poll(request: Request):
+    _demo_block()
+    _require_json(request)
+    if not OUTLOOK_FLOW["device_code"]:
+        raise HTTPException(409, "no sign-in in progress — press Connect first")
+    out = await asyncio.to_thread(outlook_auth.poll_once,
+                                  outlook_auth.client_id(ch_config.load()),
+                                  OUTLOOK_FLOW["device_code"])
+    if out["status"] != "pending":
+        OUTLOOK_FLOW["device_code"] = None
+    return out
+
+
+@app.post("/api/outlook/disconnect")
+async def outlook_disconnect(request: Request):
+    _demo_block()
+    _require_json(request)
+    outlook_auth.disconnect()
+    return {"status": "disconnected"}
 
 
 # ---- reply-scan consent (data/mail_scan_enabled marker) ----
@@ -460,14 +546,15 @@ async def add_url_endpoint(request: Request):
         body = await request.json()
     except ValueError:
         raise HTTPException(422, "expected a JSON object with a url")
-    if not isinstance(body, dict) or not isinstance(body.get("url"), str):
+    if not isinstance(body, dict) or not isinstance(body.get("url", ""), str):
         raise HTTPException(422, "expected a JSON object with a url")
     manual = body.get("manual")
     if manual is not None and not isinstance(manual, dict):
         raise HTTPException(422, "manual must be an object")
     try:
         result = await asyncio.to_thread(
-            add_url.add_from_url, body["url"][:2000], bool(body.get("force")), manual)
+            add_url.add_from_url, body.get("url", "")[:2000],
+            bool(body.get("force")), manual)
     except add_url.BadUrl as e:
         raise HTTPException(422, str(e))
     except add_url.FetchFailed as e:

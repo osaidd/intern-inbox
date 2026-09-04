@@ -35,16 +35,33 @@
 
   <section class="wstep" id="step3">
     <h2><span class="wnum">3</span> Job-alert emails <span class="wopt">optional</span></h2>
-    <p class="whint">The app can read LinkedIn/Built In/Wellfound job alerts out of your Gmail inbox. It uses a separate 16-character app password — your real password is never used. You can skip this and add it later.</p>
-    <details class="wapppass"><summary>How to get the app password (1 minute)</summary>
-      <ol>
-        <li>Turn on 2-Step Verification: <a href="https://myaccount.google.com/security" target="_blank" rel="noopener">myaccount.google.com/security</a></li>
-        <li>Create an app password named <code>intern-inbox</code>: <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener">myaccount.google.com/apppasswords</a></li>
-        <li>Copy the 16-character code below (spaces don't matter).</li>
-      </ol>
-    </details>
+    <p class="whint">The app reads LinkedIn/Built In/Wellfound job alerts out of your inbox. Pick where that mail lives — a school Outlook account works, so nothing ever touches your personal mailbox. You can skip this and add it later.</p>
+    <div class="wchoices" id="providerBoxes">
+      <label class="wcard"><input type="radio" name="mailprov" value="gmail" checked>
+        <b>Gmail</b><span>16-character app password</span></label>
+      <label class="wcard"><input type="radio" name="mailprov" value="outlook">
+        <b>Outlook</b><span>Microsoft sign-in · school accounts too</span></label>
+      <label class="wcard"><input type="radio" name="mailprov" value="imap">
+        <b>Other IMAP</b><span>host + password</span></label>
+    </div>
     <input id="emailAddr" type="email" placeholder="you@gmail.com">
-    <input id="imapPass" type="password" placeholder="16-character app password">
+    <div id="provGmail">
+      <details class="wapppass"><summary>How to get the app password (1 minute)</summary>
+        <ol>
+          <li>Turn on 2-Step Verification: <a href="https://myaccount.google.com/security" target="_blank" rel="noopener">myaccount.google.com/security</a></li>
+          <li>Create an app password named <code>intern-inbox</code>: <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener">myaccount.google.com/apppasswords</a></li>
+          <li>Copy the 16-character code below (spaces don't matter).</li>
+        </ol>
+      </details>
+    </div>
+    <div id="provOutlook" hidden>
+      <button id="outlookConnect" class="deck" type="button">Connect Microsoft account</button>
+      <span id="outlookStatus" class="sub"></span>
+    </div>
+    <div id="provImap" hidden>
+      <input id="imapHost" type="text" placeholder="IMAP host, e.g. imap.yourschool.edu">
+    </div>
+    <div id="passWrap"><input id="imapPass" type="password" placeholder="16-character app password"></div>
     <label class="wtoggle"><input type="checkbox" id="mailScan">
       Also track replies &amp; outreach — reads only mail from job senders and to/from your tracked companies, read-only, stays on this machine</label>
   </section>

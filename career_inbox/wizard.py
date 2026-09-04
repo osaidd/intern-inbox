@@ -73,10 +73,14 @@ def prefill() -> dict | None:
                 if k.strip() == "CAREER_IMAP_PASS" and v.strip():
                     imap_saved = True
         from career_inbox.pull import MAIL_CONSENT
+        from feeds import outlook_auth
         return {"roles": roles, "size": size,
                 "custom_cap": cap if size == "custom" else None,
                 "startups_only": startups_only, "avoid": avoid,
                 "email_address": raw["email"]["to"], "imap_saved": imap_saved,
+                "provider": raw.get("mail", {}).get("provider", "gmail"),
+                "imap_host": raw.get("mail", {}).get("imap_host", ""),
+                "outlook_connected": outlook_auth.connected(),
                 "mail_scan": MAIL_CONSENT.exists()}
     except Exception:  # noqa: BLE001 — foreign/broken configs prefill best-effort or not at all
         return None
@@ -168,10 +172,23 @@ def _build(choices: dict) -> dict:
     if addr:
         doc["email"]["to"] = addr
         doc["email"]["smtp_user"] = addr
+
+    provider = choices.get("provider", "gmail")
+    if provider not in ("gmail", "outlook", "imap"):
+        raise ValueError(f"unknown mail provider: {provider!r}")
+    host = (choices.get("imap_host") or "").strip()
+    if host and _has_control_char(host):
+        raise ValueError("imap_host must not contain control characters")
+    if provider == "imap" and not host:
+        raise ValueError("the IMAP option needs a host (e.g. imap.yourschool.edu)")
+    doc.setdefault("mail", {})
+    doc["mail"]["provider"] = provider
+    if provider == "imap":
+        doc["mail"]["imap_host"] = host
     return doc
 
 
-def _write_env(addr: str, imap_pass: str) -> None:
+def _write_env(addr: str, imap_pass: str, host: str = "") -> None:
     """Upsert CAREER_IMAP_USER whenever addr is given. CAREER_IMAP_PASS is only
     touched when a non-empty imap_pass is given — an address-only re-run (e.g.
     changing the email without re-entering the app password) must never delete
@@ -185,6 +202,8 @@ def _write_env(addr: str, imap_pass: str) -> None:
     updates = {"CAREER_IMAP_USER": addr}
     if imap_pass:
         updates["CAREER_IMAP_PASS"] = imap_pass.replace(" ", "")
+    if host:
+        updates["CAREER_IMAP_HOST"] = host
     lines = ENV_PATH.read_text().splitlines() if ENV_PATH.exists() else []
     kept = [l for l in lines if l.split("=", 1)[0].strip() not in updates]
     kept += [f"{k}={v}" for k, v in updates.items()]
@@ -217,7 +236,9 @@ def apply(choices: dict, force: bool) -> dict:
         staging.unlink(missing_ok=True)         # no-op once swapped; cleans up on failure
     addr = (choices.get("email_address") or "").strip()
     if addr:
-        _write_env(addr, choices.get("imap_pass") or "")
+        host = ((choices.get("imap_host") or "").strip()
+                if choices.get("provider") == "imap" else "")
+        _write_env(addr, choices.get("imap_pass") or "", host=host)
     # Reply-scan consent: the checkbox IS the truth when present — checked
     # writes the marker, unchecked on a re-run removes it. Absent key (older
     # clients, tests) leaves consent untouched.

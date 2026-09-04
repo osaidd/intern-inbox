@@ -2,7 +2,8 @@
 
 PRIVACY CONTRACT (binding; tests/test_mail_scan.py asserts it):
 - Runs only after explicit consent (data/mail_scan_enabled marker via the app
-  or wizard) AND [mail_scan] enabled (default true) AND an IMAP app password.
+  or wizard) AND [mail_scan] enabled (default true) AND a connected mailbox
+  (Gmail app password / Outlook sign-in / any IMAP host — feeds/mail_auth).
 - INBOX is searched ONLY for mail FROM known ATS/LinkedIn notification hosts
   and FROM the domains of companies already worked in the tracker; the Sent
   folder ONLY for mail TO those tracked-company domains. Nothing else is ever
@@ -17,14 +18,14 @@ PRIVACY CONTRACT (binding; tests/test_mail_scan.py asserts it):
   (career_inbox.actions.accept_suggestion).
 
 Run: uv run python -m feeds.mail_scan [--dry-run]
-Env (config/.env): CAREER_IMAP_USER (default = [email].to), CAREER_IMAP_PASS.
+Env (config/.env): CAREER_IMAP_USER (default = [email].to); CAREER_IMAP_PASS
+(gmail/imap providers) or the Outlook token cache (outlook provider).
 Writes: email_messages, contact_events, suggestions (create/expire),
 company_domains (seed), run_log — never opportunities."""
 import email
 import email.policy
 import email.utils
 import hashlib
-import imaplib
 import json
 import os
 import re
@@ -40,6 +41,8 @@ from career_hunt.mail_classify import (ATS_DOMAINS, LINKEDIN_SENDERS,  # noqa: E
                                        is_ats_host, is_bulk, is_linkedin_host,
                                        registrable_domain)
 from feeds.envfile import load_env  # noqa: E402
+from feeds.mail_auth import connect as mail_connect  # noqa: E402
+from feeds.mail_auth import ready as mail_ready  # noqa: E402
 
 SKILL = "mail-scan"
 CONSENT_MARKER = Path(__file__).resolve().parents[1] / "data" / "mail_scan_enabled"
@@ -377,7 +380,6 @@ def main(dry_run: bool = False, trigger: str = "manual", _imap=None):
     load_env()
     cfg = ch_config.load()
     user = (os.environ.get("CAREER_IMAP_USER") or cfg.email.to or "").lower()
-    password = os.environ.get("CAREER_IMAP_PASS")
     stats = {"inbox": 0, "sent": 0, "new_msgs": 0, "contacts": 0,
              "suggestions": 0, "expired": 0, "domains": 0, "new": 0}
     errors = []
@@ -393,11 +395,10 @@ def main(dry_run: bool = False, trigger: str = "manual", _imap=None):
         _log("partial", msg)
         print(msg, file=sys.stderr)
         return stats
-    if not password:
-        msg = ("CAREER_IMAP_PASS missing — add a Gmail app password to "
-               "config/.env (see SETUP.md)")
-        _log("partial", msg)
-        print(msg, file=sys.stderr)
+    mail_ok, mail_reason = mail_ready(cfg)
+    if not mail_ok:
+        _log("partial", mail_reason)
+        print(mail_reason, file=sys.stderr)
         return stats
     conn = db.connect()
     try:
@@ -408,12 +409,7 @@ def main(dry_run: bool = False, trigger: str = "manual", _imap=None):
         domains.pop(registrable_domain(user or ""), None)   # own domain is never a company
         since = (date.today()
                  - timedelta(days=cfg.mail_scan_lookback_days)).strftime("%d-%b-%Y")
-        imap = _imap or imaplib.IMAP4_SSL("imap.gmail.com")
-        try:
-            imap.login(user, password)
-        except Exception:
-            imap.logout()
-            raise
+        imap = mail_connect(user, cfg, _imap=_imap)
         try:
             try:
                 _inbox_pass(conn, imap, domains, user, since, stats, dry_run)

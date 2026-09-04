@@ -73,6 +73,9 @@ def test_add_url_endpoint(client, monkeypatch):
     assert r.status_code == 200 and r.json()["outcome"] == "new"
     assert seen == {"url": "https://x.co/j", "force": True,
                     "manual": {"company": "C", "role": "R"}}
+    seen.clear()   # url may be omitted entirely for a no-posting manual add
+    r = client.post("/api/add-url", json={"manual": {"company": "C", "role": "R"}})
+    assert r.status_code == 200 and seen["url"] == ""
     monkeypatch.setattr(web.add_url, "add_from_url",
                         lambda *a: {"outcome": "needs_confirm", "warnings": ["w"],
                                     "parsed": {}})
@@ -167,6 +170,41 @@ def test_contact_log_and_last_touch(client):
     assert client.post("/api/jobs/99999/contact",
                        json={"direction": "out"}).status_code == 404
     assert client.get("/api/jobs/99999/timeline").status_code == 404
+
+
+def test_edit_endpoint(client, monkeypatch):
+    from career_hunt import config as ch_config
+    from feeds import jobspy_pull
+    monkeypatch.setattr(ch_config, "USER_PATH", ch_config.CONFIG_DIR / "nope-x.toml")
+    monkeypatch.setattr(jobspy_pull, "USER_PATH", ch_config.CONFIG_DIR / "nope-x.toml")
+    jid = client.get("/api/jobs").json()["jobs"][0]["id"]
+    r = client.post(f"/api/jobs/{jid}/edit",
+                    json={"role": "ML Engineering Intern", "location": "Hoboken, NJ"})
+    assert r.status_code == 200
+    assert r.json()["role"] == "ML Engineering Intern"
+    assert r.json()["location"] == "Hoboken, NJ"
+    assert client.post(f"/api/jobs/{jid}/edit",
+                       json={"company": ""}).status_code == 422
+    assert client.post("/api/jobs/99999/edit",
+                       json={"role": "X"}).status_code == 404
+
+
+def test_next_action_and_due_strip(client):
+    jid = client.get("/api/jobs").json()["jobs"][0]["id"]
+    r = client.post(f"/api/jobs/{jid}/next-action",
+                    json={"date": "2020-01-01", "note": "follow up"})
+    assert r.status_code == 200 and r.json()["next_action_date"] == "2020-01-01"
+    j = next(x for x in client.get("/api/jobs").json()["jobs"] if x["id"] == jid)
+    assert j["next_action_date"] == "2020-01-01" and j["next_action_note"] == "follow up"
+    due = client.get("/api/meta").json()["due"]            # past date -> due now
+    assert [d["id"] for d in due] == [jid] and due[0]["next_action_note"] == "follow up"
+    r = client.post(f"/api/jobs/{jid}/next-action", json={"date": None})
+    assert r.json()["next_action_date"] is None
+    assert client.get("/api/meta").json()["due"] == []
+    assert client.post(f"/api/jobs/{jid}/next-action",
+                       json={"date": "soonish"}).status_code == 422
+    assert client.post("/api/jobs/99999/next-action",
+                       json={"date": "2026-09-12"}).status_code == 404
 
 
 def test_company_domain_endpoint(client):
@@ -275,3 +313,28 @@ def test_email_saved_409_when_empty(client, monkeypatch):
                 json={"ids": [x["id"] for x in client.get("/api/jobs").json()["jobs"]],
                       "action": "kill"})
     assert client.post("/api/email-saved", json={}).status_code == 409
+
+
+def test_outlook_endpoints(client, monkeypatch):
+    from career_inbox import web
+    monkeypatch.setattr(web.outlook_auth, "client_id", lambda cfg: "cid")
+    monkeypatch.setattr(web.outlook_auth, "start_device_flow",
+                        lambda cid: {"device_code": "dc", "user_code": "ABCD",
+                                     "verification_uri": "https://m.co/login"})
+    r = client.post("/api/outlook/start", json={})
+    assert r.status_code == 200 and r.json()["user_code"] == "ABCD"
+    monkeypatch.setattr(web.outlook_auth, "poll_once",
+                        lambda cid, dc: {"status": "pending"})
+    assert client.post("/api/outlook/poll", json={}).json()["status"] == "pending"
+    monkeypatch.setattr(web.outlook_auth, "poll_once",
+                        lambda cid, dc: {"status": "connected"})
+    assert client.post("/api/outlook/poll", json={}).json()["status"] == "connected"
+    # flow consumed — polling again without a start is a 409
+    assert client.post("/api/outlook/poll", json={}).status_code == 409
+    monkeypatch.setattr(web.outlook_auth, "client_id", lambda cfg: "")
+    assert client.post("/api/outlook/start", json={}).status_code == 409
+    called = {}
+    monkeypatch.setattr(web.outlook_auth, "disconnect",
+                        lambda: called.setdefault("yes", True))
+    assert client.post("/api/outlook/disconnect", json={}).status_code == 200
+    assert called == {"yes": True}

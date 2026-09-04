@@ -272,3 +272,27 @@ def test_imap_saved_false_without_password(paths, tmp_path, monkeypatch):
     _isolate_consent(tmp_path, monkeypatch)
     wizard.apply(dict(BASE, email_address="me@gmail.com"), force=False)
     assert wizard.prefill()["imap_saved"] is False
+
+
+def test_provider_choice_round_trips(paths, tmp_path, monkeypatch):
+    _isolate_consent(tmp_path, monkeypatch)
+    user, env = paths
+    wizard.apply(dict(BASE, provider="imap", imap_host="imap.school.edu",
+                      email_address="me@school.edu", imap_pass="pw"), force=False)
+    cfg = ch_config.load(user)
+    assert cfg.mail_provider == "imap" and cfg.mail_imap_host == "imap.school.edu"
+    assert "CAREER_IMAP_HOST=imap.school.edu" in env.read_text()
+    pf = wizard.prefill()
+    assert pf["provider"] == "imap" and pf["imap_host"] == "imap.school.edu"
+    # default stays gmail; outlook writes provider without needing a password
+    wizard.apply(dict(BASE), force=False)
+    assert ch_config.load(user).mail_provider == "gmail"
+    wizard.apply(dict(BASE, provider="outlook", email_address="me@school.edu"),
+                 force=False)
+    assert ch_config.load(user).mail_provider == "outlook"
+    assert wizard.prefill()["outlook_connected"] is False
+    import pytest as _pytest
+    with _pytest.raises(ValueError, match="IMAP option needs a host"):
+        wizard.apply(dict(BASE, provider="imap"), force=False)
+    with _pytest.raises(ValueError, match="unknown mail provider"):
+        wizard.apply(dict(BASE, provider="pigeon"), force=False)

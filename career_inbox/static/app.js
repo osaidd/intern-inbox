@@ -18,6 +18,12 @@ function localToday() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+function isoInDays(n) {
+  const d = new Date();
+  d.setDate(d.getDate() + n);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 /* status filter option → API `statuses` param value */
 const STATUS_OPTS = [
   ["live", "Live"], ["new", "New"], ["shortlisted", "Shortlisted"],
@@ -163,6 +169,60 @@ async function loadMeta() {
   updateEmailBtn();
   demoBanner();
   mailUi();
+  dueUi();
+}
+
+/* ---------------- follow-up due strip ----------------
+   Deliberately quiet: absent entirely until something is actually due, then a
+   thin strip above the filters — never a popup, never a badge race. */
+function dueUi() {
+  const due = (S.meta && S.meta.due) || [];
+  let bar = document.getElementById("duebar");
+  if (!due.length) { if (bar) bar.remove(); return; }
+  if (!bar) {
+    bar = document.createElement("div");
+    bar.id = "duebar";
+    $("filters").before(bar);
+  }
+  bar.textContent = "";
+  bar.appendChild(el("span", "due-head",
+                     `Follow-ups due · ${due.length}`));
+  const today = localToday();
+  for (const d of due.slice(0, 6)) {
+    const row = el("div", "due-row");
+    const overdue = d.next_action_date < today;
+    row.appendChild(el("span", overdue ? "warn nowrap" : "sub nowrap",
+                       overdue ? d.next_action_date : "today"));
+    const what = el("button", "linklike due-what", `${d.company} — ${d.role}`);
+    what.onclick = () => openDetail(d.id);
+    row.appendChild(what);
+    if (d.next_action_note) {
+      row.appendChild(el("span", "sub due-note", d.next_action_note));
+    }
+    const done = el("button", "deck", "Done");
+    done.onclick = () => saveFollowup(d.id, null, "");
+    const later = el("button", "deck", "+7d");
+    later.onclick = () => saveFollowup(d.id, isoInDays(7), d.next_action_note || "");
+    row.append(done, later);
+    bar.appendChild(row);
+  }
+  if (due.length > 6) bar.appendChild(el("div", "sub", `+ ${due.length - 6} more`));
+}
+
+async function saveFollowup(id, dateVal, note) {
+  try {
+    const resp = await postJSON(`/api/jobs/${id}/next-action`,
+                                { date: dateVal, note: note || "" });
+    patchRow(id, resp);
+    if (S.detailJob && S.detailJob.id === id) {
+      Object.assign(S.detailJob, resp);
+      renderDetail();
+    }
+    loadMeta();
+    showToast(dateVal ? `follow-up ${dateVal}` : "follow-up cleared", "ok");
+  } catch (e) {
+    showToast(String(e && e.message ? e.message : e).slice(0, 140), "err");
+  }
 }
 
 /* ---------------- reply-scan consent + review strip ----------------
@@ -589,6 +649,7 @@ function companyCell(r) {
 function roleCell(r) {
   const td = document.createElement("td");
   td.className = "role-cell";
+  td.title = r.role || "";   // full title survives the ellipsis (both branches)
   if (r.url && /^https?:\/\//i.test(r.url)) {
     const a = document.createElement("a");
     a.href = r.url; a.target = "_blank"; a.rel = "noreferrer";
@@ -786,7 +847,8 @@ function buildRow(r) {
     tr.appendChild(roleCell(r));
 
     const famTd = document.createElement("td");
-    famTd.className = "sub nowrap"; famTd.textContent = r.family || "—";
+    famTd.className = "sub nowrap fam"; famTd.textContent = r.family || "—";
+    famTd.title = r.family || "";
     tr.appendChild(famTd);
 
     const termTd = document.createElement("td");
@@ -806,14 +868,16 @@ function buildRow(r) {
     tr.appendChild(fitTd);
 
     const compTd = document.createElement("td");
-    compTd.className = r.salary_text ? "nowrap" : "sub nowrap";
+    compTd.className = r.salary_text ? "comp nowrap" : "comp sub nowrap";
     compTd.textContent = r.salary_text || "—";
+    compTd.title = r.salary_text || "";   // full text survives the ellipsis
     tr.appendChild(compTd);
 
     tr.appendChild(ageCell(r));
 
     const srcTd = document.createElement("td");
-    srcTd.className = "sub nowrap"; srcTd.textContent = r.source || "—";
+    srcTd.className = "sub nowrap src"; srcTd.textContent = r.source || "—";
+    srcTd.title = r.source || "";
     tr.appendChild(srcTd);
 
     // notes — inline edit, POST on change
@@ -875,16 +939,33 @@ async function applyStatus(id, next) {
     if (S.detailId === id) { Object.assign(S.detailJob, resp); renderDetail(); }
     render();
     loadMeta();               // header counts track the change immediately
-  } catch (e) { console.error("status change failed", e); }
+    return true;
+  } catch (e) { console.error("status change failed", e); return false; }
 }
+
+/* kill is reversible for 6 seconds — mis-clicks shouldn't cost a trip to the
+   Dead filter (the timeline honestly records both the kill and the undo) */
+async function killWithUndo(id) {
+  const r = S.rows.find((x) => x.id === id);
+  const prev = r ? r.status : "new";
+  const who = r ? r.company : "row";
+  if (prev === "dead" || !(await applyStatus(id, "dead"))) return;
+  showToast(`killed ${who}`, "warn",
+            { label: "Undo", fn: () => applyStatus(id, prev) });
+}
+
 function toggleHeart(id) {
   const r = S.rows.find((x) => x.id === id);
   applyStatus(id, r && r.status === "shortlisted" ? "new" : "shortlisted");
 }
 function killOrRestore(id) {
-  applyStatus(id, S.filters.s === "dead" ? "new" : "dead");
+  if (S.filters.s === "dead") applyStatus(id, "new");
+  else killWithUndo(id);
 }
-function changeStatus(id, next) { applyStatus(id, next); }
+function changeStatus(id, next) {
+  if (next === "dead") killWithUndo(id);
+  else applyStatus(id, next);
+}
 
 async function saveNote(id, text, inputEl) {
   try {
@@ -927,12 +1008,29 @@ function updateBulkBar() {
 async function runBulk(action) {
   const ids = [...S.sel];
   if (!ids.length) return;
+  // capture pre-kill statuses so a bulk mis-fire is one Undo away
+  const prev = action === "kill"
+    ? ids.map((id) => {
+        const r = S.rows.find((x) => x.id === id);
+        return r && r.status !== "dead" ? { id, status: r.status } : null;
+      }).filter(Boolean)
+    : [];
   try {
     await postJSON("/api/jobs/bulk", { ids, action });
   } catch (e) { console.error("bulk failed", e); return; }
   S.sel.clear();
   await load();            // bulk refetches (per spec)
   loadMeta();
+  if (prev.length) {
+    showToast(`killed ${prev.length}`, "warn", { label: "Undo", fn: async () => {
+      for (const p of prev) {
+        try { await postJSON(`/api/jobs/${p.id}/status`, { status: p.status }); }
+        catch (e) { console.error("undo failed", e); }
+      }
+      await load();
+      loadMeta();
+    } });
+  }
 }
 function clearSelection() { S.sel.clear(); render(); }
 
@@ -991,6 +1089,7 @@ function checkedAgo(lc) {
 /* ---------------- detail panel ---------------- */
 async function openDetail(id) {
   S.detailId = id;
+  S.editOpen = false;
   syncHash();
   markOpenRow();
   try {
@@ -1051,17 +1150,23 @@ function renderDetail() {
   coLine.appendChild(document.createTextNode(j.company || "—"));
   titles.appendChild(coLine);
   top.appendChild(titles);
+  const edit = el("button", "d-close", "✎");
+  edit.title = "edit details";
+  edit.onclick = () => { S.editOpen = !S.editOpen; renderDetail(); };
+  top.appendChild(edit);
   const close = el("button", "d-close", "✕");
   close.title = "close";
   close.onclick = closeDetail;
   top.appendChild(close);
   aside.appendChild(top);
 
+  if (S.editOpen) aside.appendChild(buildEditForm(j));
+
   // status button row (full funnel, current highlighted)
   const sb = el("div", "d-status");
   for (const [val, label] of FUNNEL) {
     const b = el("button", "d-stat" + (j.status === val ? " on" : ""), label);
-    b.onclick = () => applyStatus(j.id, val);
+    b.onclick = () => changeStatus(j.id, val);   // dead routes through the Undo toast
     sb.appendChild(b);
   }
   aside.appendChild(sb);
@@ -1072,6 +1177,32 @@ function renderDetail() {
     ap.appendChild(el("span", "num", j.applied_date));
     aside.appendChild(ap);
   }
+
+  // follow-up reminder (feeds the due strip above the table)
+  const fu = el("div", "d-field");
+  fu.appendChild(el("label", "d-label", "Follow-up"));
+  const fuRow = el("div", "d-fu-row");
+  const fuDate = document.createElement("input");
+  fuDate.type = "date";
+  fuDate.value = j.next_action_date || "";
+  const fuNote = document.createElement("input");
+  fuNote.placeholder = "why (optional)";
+  fuNote.maxLength = 200;
+  fuNote.value = j.next_action_note || "";
+  const fuSave = el("button", "deck", "Save");
+  fuSave.onclick = () => saveFollowup(j.id, fuDate.value || null, fuNote.value);
+  const fu3 = el("button", "deck", "+3d");
+  fu3.onclick = () => saveFollowup(j.id, isoInDays(3), fuNote.value);
+  const fu7 = el("button", "deck", "+7d");
+  fu7.onclick = () => saveFollowup(j.id, isoInDays(7), fuNote.value);
+  fuRow.append(fuDate, fuNote, fu3, fu7, fuSave);
+  if (j.next_action_date) {
+    const fuClear = el("button", "deck", "Clear");
+    fuClear.onclick = () => saveFollowup(j.id, null, "");
+    fuRow.appendChild(fuClear);
+  }
+  fu.appendChild(fuRow);
+  aside.appendChild(fu);
 
   // company card
   const card = el("div", "d-card");
@@ -1206,6 +1337,49 @@ function renderDetail() {
     out.href = j.url; out.target = "_blank"; out.rel = "noreferrer";
     aside.appendChild(out);
   }
+}
+
+/* everything is correctable: identity edits re-dedupe/re-rank server-side */
+const EDIT_FIELDS = [["company", "Company"], ["role", "Role"], ["url", "URL"],
+                     ["location", "Location"], ["salary_text", "Comp"],
+                     ["posted_date", "Posted (YYYY-MM-DD)"]];
+
+function buildEditForm(j) {
+  const wrap = el("div", "d-card d-edit");
+  wrap.appendChild(el("div", "d-card-h", "Edit details"));
+  const inputs = {};
+  for (const [key, label] of EDIT_FIELDS) {
+    const line = el("label", "d-edit-line");
+    line.appendChild(el("span", "sub", label));
+    const inp = document.createElement("input");
+    inp.value = j[key] || "";
+    inputs[key] = inp;
+    line.appendChild(inp);
+    wrap.appendChild(line);
+  }
+  const row = el("div", "d-fu-row");
+  const save = el("button", "deck", "Save");
+  save.onclick = async () => {
+    const fields = {};
+    for (const [key] of EDIT_FIELDS) fields[key] = inputs[key].value;
+    try {
+      const resp = await postJSON(`/api/jobs/${j.id}/edit`, fields);
+      S.editOpen = false;
+      patchRow(j.id, resp);
+      Object.assign(S.detailJob, resp);
+      renderDetail();
+      await load();          // identity/rank may have changed the table order
+      loadMeta();
+      showToast("saved", "ok");
+    } catch (e) {
+      showToast(String(e && e.message ? e.message : e).slice(0, 140), "err");
+    }
+  };
+  const cancel = el("button", "deck", "Cancel");
+  cancel.onclick = () => { S.editOpen = false; renderDetail(); };
+  row.append(save, cancel);
+  wrap.appendChild(row);
+  return wrap;
 }
 
 async function saveNoteFromDetail(id, text) {
@@ -1461,6 +1635,7 @@ function openManualPanel(msg) {
 function closeManualPanel() {
   $("manualPanel").hidden = true;
   for (const id of ["manualJd", "manualCompany", "manualRole", "manualLoc"]) $(id).value = "";
+  $("manualStage").value = "new";
 }
 
 function manualAdd() {
@@ -1469,6 +1644,7 @@ function manualAdd() {
     role: $("manualRole").value.trim(),
     location: $("manualLoc").value.trim(),
     jd_text: $("manualJd").value.trim(),
+    stage: $("manualStage").value,   // frontend-only: applied via /status after the add
   };
   if (!manual.company || !manual.role) {
     showToast("company and role are required", "err");
@@ -1480,7 +1656,11 @@ function manualAdd() {
 async function addFromUrl(force = false, manual = null) {
   const input = $("addUrl");
   const url = (input.value || "").trim();
-  if (!url) return;
+  if (!url && !manual) {
+    // no link is a first-class case: career fairs, referrals, no-posting companies
+    openManualPanel("No link? Fill in what you know — company and role are enough.");
+    return;
+  }
   const btn = $("addGo");
   btn.disabled = true;
   btn.textContent = "Adding…";
@@ -1501,14 +1681,21 @@ async function addFromUrl(force = false, manual = null) {
       loadMeta();
       flashRowById(d.id);
     } else {
-      let msg = `added · ${d.priority}`;
+      let landed = "new";
+      if (manual && manual.stage && manual.stage !== "new") {
+        try {   // the chosen stage rides the normal status writer (timeline included)
+          await postJSON(`/api/jobs/${d.id}/status`, { status: manual.stage });
+          landed = manual.stage;
+        } catch {}   // row is in as 'new'; the toast below stays honest
+      }
+      let msg = `added · ${d.priority}` + (landed !== "new" ? ` · ${landed}` : "");
       if (d.warnings && d.warnings.length) msg += " — flagged: " + d.warnings[0];
       input.value = "";
       closeManualPanel();
       await load();
       loadMeta();
-      if (statusInView("new")) flashRowById(d.id);
-      else msg += " — in the New view";
+      if (statusInView(landed)) flashRowById(d.id);
+      else msg += ` — in the ${landed} view`;
       showToast(msg, "ok");
     }
   } catch (e) {
@@ -1522,7 +1709,7 @@ async function addFromUrl(force = false, manual = null) {
 /* ---------------- CSV export (current filtered+sorted view) ---------------- */
 const CSV_COLS = ["company", "role", "url", "priority", "status", "family", "term", "salary_text",
   "stage", "headcount", "work_mode", "score", "posted_date", "discovered_date",
-  "applied_date", "last_out", "last_in", "source", "notes"];
+  "applied_date", "next_action_date", "last_out", "last_in", "source", "notes"];
 
 function csvCell(v) {
   const s = v == null ? "" : String(v);
@@ -1659,14 +1846,21 @@ async function runUpdate() {
 }
 
 /* ---------------- toast ---------------- */
-function showToast(msg, kind) {
+function showToast(msg, kind, action) {
   const t = $("toast");
   if (!t) return;
   t.textContent = msg;
+  if (action) {   // e.g. { label: "Undo", fn: () => ... } — lingers a bit longer
+    const b = document.createElement("button");
+    b.className = "linklike toast-act";
+    b.textContent = action.label;
+    b.onclick = () => { clearTimeout(toastTimer); t.hidden = true; action.fn(); };
+    t.appendChild(b);
+  }
   t.className = "toast" + (kind ? " " + kind : "");
   t.hidden = false;
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { t.hidden = true; }, 3400);
+  toastTimer = setTimeout(() => { t.hidden = true; }, action ? 6000 : 3400);
 }
 
 /* ---------------- auto-refresh (60s, polite) ---------------- */

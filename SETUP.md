@@ -59,11 +59,12 @@ checkbox that hides big-name companies (Google, Goldman, Meta, and about fifty
 more) — on by default — and a text box for any other company you never want to
 see.
 
-**Step 3 — job-alert emails (optional).** Your Gmail address and a 16-character
-app password, so the app can read LinkedIn / Built In / Wellfound alerts out of
-your inbox. Section 3 is the walkthrough for getting that password. Skip it and
-everything else still works: the company boards and the GitHub lists need no
-email.
+**Step 3 — job-alert emails (optional).** Pick your provider — Gmail (app
+password; section 3 is the walkthrough), Outlook (a short Microsoft sign-in;
+school accounts work, see "Outlook or another mail provider" below), or any
+other IMAP host — plus your address. A checkbox underneath opts into reply &
+outreach tracking (off by default). Skip the whole step and everything else
+still works: the company boards and the GitHub lists need no email.
 
 Press **Start my inbox**. It writes two files, starts a first pull, and drops
 you in the inbox:
@@ -77,11 +78,10 @@ which is how the app knows a later re-run is yours to overwrite.
 
 Skipped the whole thing? You get the inbox on the shared defaults, plus a banner
 offering the three questions. The **⚙** button at the top right reopens the
-setup page any time. It comes up blank every time — the form starts from its
-defaults, not from your last answers — so re-pick your roles and your size cap
-before finishing: it writes exactly what is on screen. If your config came from
-`/setup` in Claude Code instead of the wizard, re-running asks before replacing
-it.
+setup page any time, pre-filled with your current answers (a saved app password
+shows as "saved — leave blank to keep", never the value). It writes exactly
+what is on screen when you finish. If your config came from `/setup` in Claude
+Code instead of the wizard, re-running asks before replacing it.
 
 ## 3. Gmail app password
 
@@ -103,8 +103,7 @@ it at any time. Your real Google password is never used or stored.
    CAREER_IMAP_PASS=abcdefghijklmnop
    ```
 
-   The **⚙** button reopens the setup page, but it re-asks every question from
-   its defaults — editing that one line is less work.
+   The **⚙** button reopens the setup page pre-filled if you prefer clicking.
 
 7. Click **Done** in Google.
 
@@ -357,3 +356,42 @@ uv run python -m feeds.ats_pull
 If you have Claude Code, ask it in the project folder — it can read the logs and
 the database and tell you what happened. Otherwise open a GitHub issue and paste
 what the terminal printed.
+
+## Outlook or another mail provider
+
+Gmail is the default, but nothing requires it — pick your provider in wizard
+step 3. A school Outlook account is a nice fit: your personal mailbox never
+enters the picture.
+
+**Locked-down school tenant? Skip Outlook — forward instead.** Some
+universities (NUS included) block the Azure portal and third-party app
+sign-ins for student accounts, which walls off every OAuth path. The zero-Azure
+answer: auto-forward your school inbox to a Gmail (school Outlook web →
+Settings → Mail → Forwarding), point the tracker at that Gmail, and subscribe
+to job alerts with the Gmail address in the first place. Replies that companies
+send to your school address arrive through the forward, so reply tracking keeps
+working — and your personal mail can stay in a Gmail you created just for the
+hunt if you want the same separation.
+
+**Outlook (personal or school/M365).** Microsoft retired password IMAP in
+2024, so Outlook connects with a short Microsoft sign-in instead of an app
+password: press **Connect Microsoft account** in the wizard (or run
+`uv run python -m feeds.outlook_auth`), enter the code it shows at
+microsoft.com/devicelogin, done. The sign-in grants IMAP mailbox access only;
+the token lives in the gitignored `data/outlook_token.json` and is revocable
+any time at account.microsoft.com → Security. Two caveats: (1) the app signs in
+through an Azure "public client" registration — a free, one-time, five-minute
+setup whose id is shared by every install of this repo via
+`[mail].outlook_client_id` (maintainers: portal.azure.com → App registrations →
+New → any account type incl. personal → no redirect URI → Authentication →
+"Allow public client flows" = Yes → copy the Application ID into
+`config/career.example.toml`); (2) some school tenants require an admin's
+consent for third-party apps — the Microsoft sign-in page tells you if yours
+does.
+
+**Any other IMAP provider.** Pick "Other IMAP" and enter the host (e.g.
+`imap.fastmail.com`) and your mailbox/app password; or set `CAREER_IMAP_HOST`
+in `config/.env` by hand.
+
+The privacy contract is identical for every provider: read-only connections,
+the same scoped searches, everything stored locally.

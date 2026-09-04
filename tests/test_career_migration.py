@@ -56,6 +56,13 @@ def test_007_stage_mail_tables(tmp_path, monkeypatch):
     conn.close()
 
 
+def test_008_next_action_columns(tmp_path, monkeypatch):
+    conn = _fresh_db(tmp_path, monkeypatch)
+    cols = {r["name"] for r in conn.execute("PRAGMA table_info(opportunities)")}
+    assert {"next_action_date", "next_action_note"} <= cols
+    conn.close()
+
+
 def test_007_checks_and_uniques(tmp_path, monkeypatch):
     conn = _fresh_db(tmp_path, monkeypatch)
     conn.execute("INSERT INTO opportunities (source, company, role, dedupe_hash, status) "

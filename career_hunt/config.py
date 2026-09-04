@@ -62,10 +62,13 @@ class Config:
     linkedin_lookback_days: int
     mail_sources: MailSources
     email: EmailConfig
-    # [mail_scan] is OPTIONAL (allow_late_stages precedent): existing personal
-    # career.toml files must keep loading without it.
+    # [mail_scan] and [mail] are OPTIONAL (allow_late_stages precedent):
+    # existing personal career.toml files must keep loading without them.
     mail_scan_enabled: bool = True
     mail_scan_lookback_days: int = 30
+    mail_provider: str = "gmail"       # gmail | outlook | imap
+    mail_imap_host: str = ""           # provider "imap" only (or CAREER_IMAP_HOST)
+    outlook_client_id: str = ""        # Azure public-client app id (or OUTLOOK_CLIENT_ID)
 
 
 def load(path=None) -> Config:
@@ -102,6 +105,9 @@ def load(path=None) -> Config:
                           smtp_port=e["smtp_port"], smtp_user=e["smtp_user"]),
         mail_scan_enabled=raw.get("mail_scan", {}).get("enabled", True),
         mail_scan_lookback_days=raw.get("mail_scan", {}).get("lookback_days", 30),
+        mail_provider=raw.get("mail", {}).get("provider", "gmail"),
+        mail_imap_host=raw.get("mail", {}).get("imap_host", ""),
+        outlook_client_id=raw.get("mail", {}).get("outlook_client_id", ""),
     )
 
 

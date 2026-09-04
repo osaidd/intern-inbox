@@ -69,6 +69,9 @@ def live(tmp_path, monkeypatch):
     ("/api/mail-scan/enable", {}),
     ("/api/mail-scan/disable", {}),
     ("/api/update", {}),
+    ("/api/outlook/start", {}),
+    ("/api/outlook/poll", {}),
+    ("/api/outlook/disconnect", {}),
 ])
 def test_owner_writes_are_403_in_demo(demo, path, payload):
     r = demo.post(path, json=payload)

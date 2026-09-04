@@ -172,6 +172,60 @@ def test_dismiss_touches_nothing(seed):
         actions.dismiss_suggestion(999)
 
 
+def test_edit_job_identity_and_rank(seed, monkeypatch):
+    from career_hunt import config as ch_config
+    from feeds import jobspy_pull
+    missing = seed.DB_PATH.parent / "no-user.toml"
+    monkeypatch.setattr(ch_config, "USER_PATH", missing)
+    monkeypatch.setattr(jobspy_pull, "USER_PATH", missing)
+    out = actions.edit_job(1, {"company": "Ramp", "role": "AI Engineering Intern",
+                               "url": "https://ramp.com/j/1",
+                               "location": "New York, NY"})
+    assert out["company"] == "Ramp" and out["location"] == "New York, NY"
+    assert out["company_id"] is not None            # relinked to a real company row
+    from career_hunt.models import dedupe_hash
+    assert out["dedupe_hash"] == dedupe_hash("Ramp", "AI Engineering Intern",
+                                             "https://ramp.com/j/1")
+    assert out["priority"] in ("high", "medium", "low")
+    # colliding with another row's identity refuses instead of forking
+    actions.edit_job(2, {"role": "AI Engineering Intern"})
+    with pytest.raises(ValueError, match="already tracked"):
+        actions.edit_job(2, {"company": "Ramp", "url": "https://ramp.com/j/1"})
+    with pytest.raises(ValueError, match="blank"):
+        actions.edit_job(1, {"company": "  "})
+    with pytest.raises(ValueError, match="http"):
+        actions.edit_job(1, {"url": "javascript:alert(1)"})
+    with pytest.raises(ValueError, match="YYYY-MM-DD"):
+        actions.edit_job(1, {"posted_date": "yesterday"})
+    with pytest.raises(ValueError, match="not editable"):
+        actions.edit_job(1, {"status": "offer"})
+    with pytest.raises(ValueError):
+        actions.edit_job(999, {"company": "X"})
+
+
+def test_edit_clears_optional_fields(seed, monkeypatch):
+    from career_hunt import config as ch_config
+    from feeds import jobspy_pull
+    missing = seed.DB_PATH.parent / "no-user.toml"
+    monkeypatch.setattr(ch_config, "USER_PATH", missing)
+    monkeypatch.setattr(jobspy_pull, "USER_PATH", missing)
+    actions.edit_job(1, {"location": "Hoboken, NJ", "salary_text": "$30/hr"})
+    out = actions.edit_job(1, {"location": "", "salary_text": ""})
+    assert out["location"] is None and out["salary_text"] is None
+
+
+def test_set_next_action(seed):
+    out = actions.set_next_action(1, "2026-09-12", note="  nudge the recruiter  ")
+    assert out["next_action_date"] == "2026-09-12"
+    assert out["next_action_note"] == "nudge the recruiter"
+    out = actions.set_next_action(1, None)                 # clear wipes both
+    assert out["next_action_date"] is None and out["next_action_note"] is None
+    with pytest.raises(ValueError):
+        actions.set_next_action(1, "next tuesday")
+    with pytest.raises(ValueError):
+        actions.set_next_action(999, "2026-09-12")
+
+
 def test_log_contact(seed):
     out = actions.log_contact(opportunity_id=1, direction="out", note="cold email")
     c = out["contact"]

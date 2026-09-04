@@ -14,7 +14,6 @@ Env (config/.env): CAREER_IMAP_USER (default = [email].to), CAREER_IMAP_PASS (re
 Writes: opportunities, companies, run_log."""
 import email
 import email.policy
-import imaplib
 import json
 import os
 import sys
@@ -29,6 +28,8 @@ from career_hunt.score import matches  # noqa: E402
 from career_hunt.sources import builtin_mail, linkedin_mail, wellfound_mail  # noqa: E402
 from career_hunt.store import get_or_create_company, insert_job  # noqa: E402
 from feeds.envfile import load_env  # noqa: E402
+from feeds.mail_auth import connect as mail_connect  # noqa: E402
+from feeds.mail_auth import ready as mail_ready  # noqa: E402
 
 SKILL = "linkedin-mail-pull"   # historical key — dashboards filter on it, do NOT rename
 
@@ -91,22 +92,22 @@ def _ingest(conn, cfg, name, parse, to_jobs, htmls, stats, per, new_rows, dry_ru
                 per[name][outcome] += 1
 
 
-def main(dry_run: bool = False, trigger: str = "manual"):
+def main(dry_run: bool = False, trigger: str = "manual", _imap=None):
     started = datetime.now().isoformat(timespec="seconds")
     load_env()
     cfg = ch_config.load()
     sources = build_sources(cfg)
     user = os.environ.get("CAREER_IMAP_USER", cfg.email.to)
-    password = os.environ.get("CAREER_IMAP_PASS")
     stats = {"emails": 0, "found": 0, "new": 0, "dup": 0, "excluded": 0,
              "high": 0, "medium": 0, "low": 0}
     per = {n: {"emails": 0, "found": 0, "new": 0, "dup": 0, "excluded": 0}
            for n, *_ in sources}
     errors = []
-    if not password:
+    mail_ok, mail_reason = mail_ready(cfg)
+    if not mail_ok:
         # documented not-yet-configured state, not a failure: 'partial' keeps the
         # weekly scheduled run from painting a false red error row (final-review fix)
-        msg = "CAREER_IMAP_PASS missing — add a Gmail app password to config/.env (see SETUP.md)"
+        msg = mail_reason
         if not dry_run:
             db.log_run(skill=SKILL, trigger=trigger, status="partial",
                        summary=msg, started_at=started,
@@ -115,12 +116,7 @@ def main(dry_run: bool = False, trigger: str = "manual"):
         print(msg, file=sys.stderr)
         return stats
     try:
-        imap = imaplib.IMAP4_SSL("imap.gmail.com")
-        try:
-            imap.login(user, password)
-        except Exception:
-            imap.logout()
-            raise
+        imap = mail_connect(user, cfg, _imap=_imap)
         fetched = {}
         try:
             for name, sender, _, _ in sources:      # one session, per-sender search
