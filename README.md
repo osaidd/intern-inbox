@@ -50,7 +50,9 @@ each row changed stage, when you last reached out, and how long a reply has been
 quiet. Found a posting somewhere else? Paste its URL into the box at the top and
 the app fetches the title, company, location, and description and scores the fit
 (LinkedIn links can't be fetched — the app asks you to paste the description
-instead). It only keeps **internships** in **New York City and New Jersey** —
+instead). No posting at all — a career-fair chat, a referral, a company that
+reached out? Press **Add** with the box empty and fill in what you know; the
+row can land directly at whatever stage it's already at. It only keeps **internships** in **New York City and New Jersey** —
 everything else is dropped before it reaches you.
 
 ## Requirements

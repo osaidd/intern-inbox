@@ -149,11 +149,15 @@ def _enriched_dead_warning(job: Job, cfg) -> list:
 
 def add_from_url(url: str, force: bool = False, manual: dict | None = None,
                  _opener=None) -> dict:
-    """The whole blocking flow behind POST /api/add-url."""
+    """The whole blocking flow behind POST /api/add-url. A URL is optional when
+    `manual` fields are given — an offline opportunity (career fair, referral,
+    a company with no posting) is a row like any other, minus the fetch."""
     started = datetime.now().isoformat(timespec="seconds")
     url = (url or "").strip()
-    split = urllib.parse.urlsplit(url)
-    if split.scheme not in ("http", "https") or not split.hostname:
+    if not url and manual is None:
+        raise BadUrl("paste a link — or fill in the details to add one by hand")
+    split = urllib.parse.urlsplit(url) if url else None
+    if url and (split.scheme not in ("http", "https") or not split.hostname):
         raise BadUrl("that doesn't look like a link — paste the posting's URL")
     cfg = ch_config.load()
     if manual is not None:
@@ -162,7 +166,7 @@ def add_from_url(url: str, force: bool = False, manual: dict | None = None,
         role = (m.get("role") or "").strip()
         if not company or not role:
             raise BadUrl("company and role are required to add manually")
-        job = Job(company=company, role=role, url=url, source="browser",
+        job = Job(company=company, role=role, url=url or None, source="browser",
                   location=(m.get("location") or "").strip() or None,
                   jd_text=(m.get("jd_text") or "").strip() or None)
         resolver = "manual"

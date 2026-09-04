@@ -460,14 +460,15 @@ async def add_url_endpoint(request: Request):
         body = await request.json()
     except ValueError:
         raise HTTPException(422, "expected a JSON object with a url")
-    if not isinstance(body, dict) or not isinstance(body.get("url"), str):
+    if not isinstance(body, dict) or not isinstance(body.get("url", ""), str):
         raise HTTPException(422, "expected a JSON object with a url")
     manual = body.get("manual")
     if manual is not None and not isinstance(manual, dict):
         raise HTTPException(422, "manual must be an object")
     try:
         result = await asyncio.to_thread(
-            add_url.add_from_url, body["url"][:2000], bool(body.get("force")), manual)
+            add_url.add_from_url, body.get("url", "")[:2000],
+            bool(body.get("force")), manual)
     except add_url.BadUrl as e:
         raise HTTPException(422, str(e))
     except add_url.FetchFailed as e:

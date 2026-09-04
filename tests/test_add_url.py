@@ -123,6 +123,27 @@ def test_linkedin_manual_stores_like_any_paste(env):
                              manual={"company": "", "role": "X"})
 
 
+def test_no_url_manual_add(env):
+    """Offline opportunities (career fair, referral, no posting) are rows too:
+    empty URL + manual fields stores with url NULL, scored and gated like any add."""
+    m = {"company": "Stealth Fintech", "role": "Founding Intern",
+         "location": "New York, NY", "jd_text": ""}
+    out = add_url.add_from_url("", manual=m)
+    assert out["outcome"] == "new"
+    conn = db.connect()
+    row = conn.execute("SELECT url, source, status FROM opportunities").fetchone()
+    conn.close()
+    assert row["url"] is None and row["source"] == "browser" and row["status"] == "new"
+    assert add_url.add_from_url("", manual=m)["outcome"] == "dup"   # deduped sans URL
+    assert _counts()[0] == 1
+
+
+def test_no_url_no_manual_is_guidance(env):
+    with pytest.raises(add_url.BadUrl, match="by hand"):
+        add_url.add_from_url("")
+    assert _counts() == (0, 0)
+
+
 def test_ashby_url_resolves_via_board_api(env):
     out = add_url.add_from_url("https://jobs.ashbyhq.com/solva/aaaa-1111",
                                _opener=_opener({"api.ashbyhq.com": ASHBY}))

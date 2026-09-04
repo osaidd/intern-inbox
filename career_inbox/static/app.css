@@ -183,9 +183,12 @@ tbody tr.rowflash { animation: rowflash 1.2s ease-out; }
 #bulkClear { margin-left: auto; }
 
 /* ---------- table ---------- */
-main { padding: 8px 28px 48px; overflow-x: auto; }
+/* Every column stays on screen: tight paddings + hard ellipsis caps on the
+   three wide text columns (Role, Company, Comp — full value on hover). The
+   overflow-x is a last-resort floor for very narrow windows, not the norm. */
+main { padding: 8px 14px 48px; overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; }
-th, td { text-align: left; padding: 9px 8px; vertical-align: top; font-size: 14px;
+th, td { text-align: left; padding: 8px 5px; vertical-align: top; font-size: 14px;
          border-bottom: 1px solid var(--line); }
 tbody tr:last-child td { border-bottom: none; }
 tbody tr:hover { background: rgba(255, 255, 255, 0.03); }
@@ -208,7 +211,7 @@ th.on .arrow { color: var(--ink); }
            margin-left: 8px; }
 
 /* company cell: name + faint stage/size sub-line */
-.co-name { color: var(--ink); font-weight: 500; max-width: 180px;
+.co-name { color: var(--ink); font-weight: 500; max-width: 126px;
            overflow: hidden; text-overflow: ellipsis; }
 .co-sub { color: var(--muted); font-size: 12px; }
 
@@ -226,7 +229,7 @@ tr.grp .grp-name { color: var(--ink); font-weight: 600; }
 tr.grp:hover .grp-name { text-decoration: underline; }
 
 /* notes inline input — edit in place, save on change */
-.note-input { width: 150px; background: transparent;
+.note-input { width: 88px; background: transparent;
   border: 1px solid transparent; border-radius: 5px; color: var(--text);
   font-size: 13px; padding: 3px 6px; transition: border-color 0.15s ease-out; }
 .note-input:focus { width: 220px; }
@@ -239,6 +242,7 @@ input[type="checkbox"] { accent-color: var(--muted); cursor: pointer; }
 
 /* ---------- row actions (♥ / ✕ / status) ---------- */
 td.actions { white-space: nowrap; }
+td.actions select { max-width: 84px; font-size: 12px; padding: 4px 4px; }
 button.act { color: var(--muted); font-size: 14px; padding: 2px 6px;
   border-radius: 5px; transition: color 0.15s ease-out,
   background-color 0.15s ease-out; }
@@ -254,7 +258,11 @@ select.status-sel { margin-left: 6px; font-size: 12px; padding: 3px 6px; }
 tbody tr.open { background: rgba(255, 255, 255, 0.05); }
 
 /* keep the ↗ glued to the (ellipsized) role title on one line */
-td.role-cell { white-space: nowrap; }
+td.role-cell { white-space: nowrap; max-width: 195px;
+               overflow: hidden; text-overflow: ellipsis; }
+td.comp { max-width: 92px; overflow: hidden; text-overflow: ellipsis; }
+td.fam { max-width: 92px; overflow: hidden; text-overflow: ellipsis; }
+td.src { max-width: 72px; overflow: hidden; text-overflow: ellipsis; }
 .link-out { color: var(--muted); font-size: 12px; }
 
 /* ---------- empty states ---------- */

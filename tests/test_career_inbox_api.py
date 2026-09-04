@@ -73,6 +73,9 @@ def test_add_url_endpoint(client, monkeypatch):
     assert r.status_code == 200 and r.json()["outcome"] == "new"
     assert seen == {"url": "https://x.co/j", "force": True,
                     "manual": {"company": "C", "role": "R"}}
+    seen.clear()   # url may be omitted entirely for a no-posting manual add
+    r = client.post("/api/add-url", json={"manual": {"company": "C", "role": "R"}})
+    assert r.status_code == 200 and seen["url"] == ""
     monkeypatch.setattr(web.add_url, "add_from_url",
                         lambda *a: {"outcome": "needs_confirm", "warnings": ["w"],
                                     "parsed": {}})

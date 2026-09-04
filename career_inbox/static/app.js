@@ -589,6 +589,7 @@ function companyCell(r) {
 function roleCell(r) {
   const td = document.createElement("td");
   td.className = "role-cell";
+  td.title = r.role || "";   // full title survives the ellipsis (both branches)
   if (r.url && /^https?:\/\//i.test(r.url)) {
     const a = document.createElement("a");
     a.href = r.url; a.target = "_blank"; a.rel = "noreferrer";
@@ -786,7 +787,8 @@ function buildRow(r) {
     tr.appendChild(roleCell(r));
 
     const famTd = document.createElement("td");
-    famTd.className = "sub nowrap"; famTd.textContent = r.family || "—";
+    famTd.className = "sub nowrap fam"; famTd.textContent = r.family || "—";
+    famTd.title = r.family || "";
     tr.appendChild(famTd);
 
     const termTd = document.createElement("td");
@@ -806,14 +808,16 @@ function buildRow(r) {
     tr.appendChild(fitTd);
 
     const compTd = document.createElement("td");
-    compTd.className = r.salary_text ? "nowrap" : "sub nowrap";
+    compTd.className = r.salary_text ? "comp nowrap" : "comp sub nowrap";
     compTd.textContent = r.salary_text || "—";
+    compTd.title = r.salary_text || "";   // full text survives the ellipsis
     tr.appendChild(compTd);
 
     tr.appendChild(ageCell(r));
 
     const srcTd = document.createElement("td");
-    srcTd.className = "sub nowrap"; srcTd.textContent = r.source || "—";
+    srcTd.className = "sub nowrap src"; srcTd.textContent = r.source || "—";
+    srcTd.title = r.source || "";
     tr.appendChild(srcTd);
 
     // notes — inline edit, POST on change
@@ -1461,6 +1465,7 @@ function openManualPanel(msg) {
 function closeManualPanel() {
   $("manualPanel").hidden = true;
   for (const id of ["manualJd", "manualCompany", "manualRole", "manualLoc"]) $(id).value = "";
+  $("manualStage").value = "new";
 }
 
 function manualAdd() {
@@ -1469,6 +1474,7 @@ function manualAdd() {
     role: $("manualRole").value.trim(),
     location: $("manualLoc").value.trim(),
     jd_text: $("manualJd").value.trim(),
+    stage: $("manualStage").value,   // frontend-only: applied via /status after the add
   };
   if (!manual.company || !manual.role) {
     showToast("company and role are required", "err");
@@ -1480,7 +1486,11 @@ function manualAdd() {
 async function addFromUrl(force = false, manual = null) {
   const input = $("addUrl");
   const url = (input.value || "").trim();
-  if (!url) return;
+  if (!url && !manual) {
+    // no link is a first-class case: career fairs, referrals, no-posting companies
+    openManualPanel("No link? Fill in what you know — company and role are enough.");
+    return;
+  }
   const btn = $("addGo");
   btn.disabled = true;
   btn.textContent = "Adding…";
@@ -1501,14 +1511,21 @@ async function addFromUrl(force = false, manual = null) {
       loadMeta();
       flashRowById(d.id);
     } else {
-      let msg = `added · ${d.priority}`;
+      let landed = "new";
+      if (manual && manual.stage && manual.stage !== "new") {
+        try {   // the chosen stage rides the normal status writer (timeline included)
+          await postJSON(`/api/jobs/${d.id}/status`, { status: manual.stage });
+          landed = manual.stage;
+        } catch {}   // row is in as 'new'; the toast below stays honest
+      }
+      let msg = `added · ${d.priority}` + (landed !== "new" ? ` · ${landed}` : "");
       if (d.warnings && d.warnings.length) msg += " — flagged: " + d.warnings[0];
       input.value = "";
       closeManualPanel();
       await load();
       loadMeta();
-      if (statusInView("new")) flashRowById(d.id);
-      else msg += " — in the New view";
+      if (statusInView(landed)) flashRowById(d.id);
+      else msg += ` — in the ${landed} view`;
       showToast(msg, "ok");
     }
   } catch (e) {
