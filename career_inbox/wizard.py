@@ -39,6 +39,49 @@ def state() -> dict:
     return {"configured": configured, "wizard_written": wizard_written}
 
 
+def prefill() -> dict | None:
+    """Invert the current career.toml back into wizard answers so the gear
+    re-run opens pre-filled instead of blank. Exact for wizard-written configs
+    (the emit is a pure union); best-effort for /setup ones; None when there is
+    no config or it doesn't parse. Secrets never leave the server: imap_saved
+    is a bool, never the value."""
+    p = ch_config.USER_PATH
+    if not p.exists():
+        return None
+    try:
+        with open(p, "rb") as f:
+            raw = tomllib.load(f)
+        with open(ch_config.EXAMPLE_PATH, "rb") as f:
+            example = tomllib.load(f)
+        presets = load_presets()
+        titles = set(raw["role"]["target_titles"])
+        roles = [k for k, pr in presets.items()
+                 if set(pr["target_titles"]) <= titles]
+        cap = raw["company"]["hard_cap_headcount"]
+        allow_late = raw["company"].get("allow_late_stages", False)
+        size = next((k for k, r in SIZE_PRESETS.items()
+                     if r["cap"] == cap and r["allow_late"] == allow_late), "custom")
+        excludes = raw["role"]["exclude_companies"]
+        base = example["role"]["exclude_companies"]
+        startups_only = set(base) <= set(excludes)
+        avoid = ([x for x in excludes if x not in base] if startups_only
+                 else list(excludes))
+        imap_saved = False
+        if ENV_PATH.exists():
+            for line in ENV_PATH.read_text().splitlines():
+                k, _, v = line.partition("=")
+                if k.strip() == "CAREER_IMAP_PASS" and v.strip():
+                    imap_saved = True
+        from career_inbox.pull import MAIL_CONSENT
+        return {"roles": roles, "size": size,
+                "custom_cap": cap if size == "custom" else None,
+                "startups_only": startups_only, "avoid": avoid,
+                "email_address": raw["email"]["to"], "imap_saved": imap_saved,
+                "mail_scan": MAIL_CONSENT.exists()}
+    except Exception:  # noqa: BLE001 — foreign/broken configs prefill best-effort or not at all
+        return None
+
+
 def _union(lists):
     out = []
     for lst in lists:
@@ -175,4 +218,16 @@ def apply(choices: dict, force: bool) -> dict:
     addr = (choices.get("email_address") or "").strip()
     if addr:
         _write_env(addr, choices.get("imap_pass") or "")
+    # Reply-scan consent: the checkbox IS the truth when present — checked
+    # writes the marker, unchecked on a re-run removes it. Absent key (older
+    # clients, tests) leaves consent untouched.
+    if "mail_scan" in choices:
+        from datetime import datetime
+
+        from career_inbox.pull import MAIL_CONSENT
+        if choices.get("mail_scan"):
+            MAIL_CONSENT.parent.mkdir(parents=True, exist_ok=True)
+            MAIL_CONSENT.write_text(datetime.now().isoformat(timespec="seconds"))
+        else:
+            MAIL_CONSENT.unlink(missing_ok=True)
     return state()

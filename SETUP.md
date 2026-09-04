@@ -157,8 +157,27 @@ which is expected, not a broken install. Ignore the button if you do not want
 the email. The automatic digest after each check also needs `enabled = true`
 under `[email]` in `config/career.toml`.
 
-Run `git pull` every week or so — other students add company boards, and you get
-them for free.
+Press **Update** in the app (or run `git pull`) every week or so — other
+students add company boards, and you get them for free. After an update the
+banner tells you to restart: Ctrl+C in the terminal, then
+`uv run intern-inbox --open`.
+
+### Reply & outreach tracking (separate opt-in)
+
+The same app password can also power reply tracking — but it is **off until you
+turn it on**, with the checkbox in the wizard or the green banner in the app.
+When on, once a day the app searches your INBOX only for mail *from* known
+ATS/job senders (Greenhouse, Ashby, Lever, LinkedIn notifications, …) and from
+the mail domains of companies already in your tracker, and your Sent folder
+only for mail *to* those tracked-company domains. It connects read-only —
+nothing is marked read, moved, or sent — and stores headers plus a short
+snippet in the local database. It never changes a row's stage by itself: an
+"application received" or a rejection shows up as a suggestion you accept or
+dismiss in the app, and every row stays yours to move by hand.
+
+Turn it off any time with the "turn off" link in the app, the wizard checkbox,
+or `enabled = false` under `[mail_scan]` in `config/career.toml`. Revoking the
+app password at myaccount.google.com shuts out both feeds entirely.
 
 Optional, Mac only: `automation/install-intern-inbox-app.sh` makes an app icon in
 `~/Applications` that does the start-and-open in one click. Add `--dock` to pin

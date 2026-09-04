@@ -40,11 +40,16 @@ def get_or_create_company(conn, name, hints=None) -> int:
     return cur.lastrowid
 
 
-def insert_job(conn, job: Job, cfg: Config, dry_run: bool = False):
+def insert_job(conn, job: Job, cfg: Config, dry_run: bool = False,
+               override_gates: bool = False):
+    """override_gates: a paste is user intent — skip matches() (the caller has
+    already shown gate_warnings and the user said yes). Blank company/role and
+    dedupe still apply; a dead-tier priority stores visible (new/low), never
+    auto-buried."""
     if not (isinstance(job.company, str) and job.company.strip()
             and isinstance(job.role, str) and job.role.strip()):
         return ("excluded", None)
-    if not matches(job, cfg):
+    if not override_gates and not matches(job, cfg):
         return ("excluded", None)
     h = job.dedupe_hash()
     row = conn.execute(
@@ -60,7 +65,7 @@ def insert_job(conn, job: Job, cfg: Config, dry_run: bool = False):
     comp = dict(conn.execute("SELECT stage, headcount FROM companies WHERE id=?",
                              (cid,)).fetchone() or {})
     pri = priority(job, comp or None, cfg)
-    status = "dead" if pri == "dead" else "new"
+    status = "dead" if pri == "dead" and not override_gates else "new"
     stored_pri = "low" if pri == "dead" else pri
     db.insert("opportunities", {
         "source": job.source, "company": job.company.strip(), "role": job.role.strip(),

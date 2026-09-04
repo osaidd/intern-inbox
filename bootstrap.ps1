@@ -38,9 +38,15 @@ if ($LASTEXITCODE -ne 0) {
   return
 }
 
+# Claude Code is optional depth, not the default path - ask, never hijack.
+$useClaude = $false
 if (Get-Command claude -ErrorAction SilentlyContinue) {
+  $ans = Read-Host "Found Claude Code. Open the project there for guided setup instead of the browser app? [y/N]"
+  if ($ans -match '^[Yy]') { $useClaude = $true }
+}
+if ($useClaude) {
   Write-Host ""
-  Write-Host "Found Claude Code - opening the project in it now. Type /setup when it loads."
+  Write-Host "Opening in Claude Code - type /setup when it loads."
   claude
 } else {
   Write-Host ""

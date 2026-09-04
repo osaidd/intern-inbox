@@ -72,6 +72,39 @@ def test_company_upsert_inside_open_write_txn(tmp_path, monkeypatch):
     conn.close()
 
 
+def test_override_gates_stores_gated_job(tmp_path, monkeypatch):
+    """A paste is user intent: override_gates skips matches() but nothing else."""
+    conn = _db(tmp_path, monkeypatch)
+    j = _job(location="San Francisco, CA", url="https://x.co/sf")
+    assert insert_job(conn, j, CFG) == ("excluded", None)
+    outcome, _pri = insert_job(conn, j, CFG, override_gates=True)
+    assert outcome == "new"
+    row = conn.execute("SELECT status, location FROM opportunities").fetchone()
+    assert row["status"] == "new" and row["location"] == "San Francisco, CA"
+    # dedupe still applies under force
+    assert insert_job(conn, j, CFG, override_gates=True) == ("dup", None)
+    conn.close()
+
+
+def test_override_gates_never_buries(tmp_path, monkeypatch):
+    """Forced insert of a dead-tier company lands visible: status new, priority low."""
+    conn = _db(tmp_path, monkeypatch)
+    get_or_create_company(conn, "Solva", hints={"stage": "seed", "headcount": 800,
+                                                "enrich_source": "test"})
+    outcome, pri = insert_job(conn, _job(), CFG, override_gates=True)
+    assert (outcome, pri) == ("new", "low")
+    row = conn.execute("SELECT status, priority FROM opportunities").fetchone()
+    assert row["status"] == "new" and row["priority"] == "low"
+    conn.close()
+
+
+def test_override_gates_blank_still_excluded(tmp_path, monkeypatch):
+    conn = _db(tmp_path, monkeypatch)
+    assert insert_job(conn, _job(role="  "), CFG, override_gates=True) == ("excluded", None)
+    assert insert_job(conn, _job(company=""), CFG, override_gates=True) == ("excluded", None)
+    conn.close()
+
+
 def test_recompute_after_enrichment(tmp_path, monkeypatch):
     conn = _db(tmp_path, monkeypatch)
     insert_job(conn, _job(), CFG)                 # low (unenriched)

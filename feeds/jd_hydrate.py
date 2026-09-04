@@ -71,6 +71,24 @@ def candidates(conn, cap: int):
         (cutoff, cap)).fetchall()
 
 
+def backfill_scores(conn, legacy_cfg) -> int:
+    """Zero-network sweep: score live rows that carry JD text but no score yet —
+    rows born WITH jd_text (/api/add, paste) never enter the fetch loop above.
+    score_job's None (excluded title) stays NULL and is re-checked next run."""
+    rows = conn.execute(
+        "SELECT id, role, jd_text, posted_date FROM opportunities "
+        "WHERE score IS NULL AND jd_text IS NOT NULL "
+        "AND status IN ('new','shortlisted','applied','interviewing')").fetchall()
+    n = 0
+    for r in rows:
+        s = score_job(r["role"], r["jd_text"], r["posted_date"], legacy_cfg)
+        if s is not None:
+            conn.execute("UPDATE opportunities SET score=? WHERE id=?", (s, r["id"]))
+            n += 1
+    conn.commit()
+    return n
+
+
 def main(dry_run: bool = False, cap: int = CAP, trigger: str = "manual",
          _opener=None, _sleep=time.sleep):
     started = datetime.now().isoformat(timespec="seconds")
@@ -79,7 +97,8 @@ def main(dry_run: bool = False, cap: int = CAP, trigger: str = "manual",
     # arbitrary third-party posting hosts get a neutral UA — the contact address
     # is reserved for the known board APIs and Nominatim
     ua = DEFAULT_UA
-    stats = {"tried": 0, "hydrated": 0, "thin_or_dead": 0, "rescored": 0}
+    stats = {"tried": 0, "hydrated": 0, "thin_or_dead": 0, "rescored": 0,
+             "score_backfilled": 0}
     conn = db.connect()
     try:
         rows = candidates(conn, cap)
@@ -113,6 +132,8 @@ def main(dry_run: bool = False, cap: int = CAP, trigger: str = "manual",
             if r["company_id"]:
                 touched_companies.add(r["company_id"])
         conn.commit()
+        if not dry_run:
+            stats["score_backfilled"] = backfill_scores(conn, legacy_cfg)
         for cid in touched_companies:   # fuller JD text can change role strength
             recompute_priorities(conn, cfg, cid)
     except Exception as e:
@@ -125,7 +146,8 @@ def main(dry_run: bool = False, cap: int = CAP, trigger: str = "manual",
     finally:
         conn.close()
     summary = (f"tried={stats['tried']} hydrated={stats['hydrated']} "
-               f"thin_or_dead={stats['thin_or_dead']} rescored={stats['rescored']}")
+               f"thin_or_dead={stats['thin_or_dead']} rescored={stats['rescored']} "
+               f"score_backfilled={stats['score_backfilled']}")
     if not dry_run:
         db.log_run(skill="jd-hydrate", trigger=trigger, status="ok", summary=summary,
                    started_at=started,

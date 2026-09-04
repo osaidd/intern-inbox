@@ -19,7 +19,7 @@ from career_hunt.families import role_family  # noqa: E402
 from career_hunt.models import Job  # noqa: E402
 from career_hunt.store import get_or_create_company, insert_job  # noqa: E402
 from career_hunt.term import term  # noqa: E402
-from career_inbox import actions, pull, wizard  # noqa: E402
+from career_inbox import actions, add_url, pull, update, wizard  # noqa: E402
 from feeds.ats_pull import load_orgs  # noqa: E402
 from feeds.envfile import load_env  # noqa: E402
 
@@ -98,11 +98,19 @@ ALL_STATUSES = ("new", "shortlisted", "applied", "interviewing", "offer",
 PRIORITY_RANK = ("CASE o.priority WHEN 'high' THEN 0 WHEN 'medium' THEN 1 "
                  "WHEN 'low' THEN 2 ELSE 3 END")
 
-JOB_COLS = ("o.id, o.company, o.role, o.url, o.location, o.priority, o.status, "
+JOB_COLS = ("o.id, o.company_id, o.company, o.role, o.url, o.location, o.priority, o.status, "
             "o.source, o.score, o.salary_text, o.work_mode, o.office_area, o.discovered_date, "
             "o.posted_date, o.last_seen, o.applied_date, o.notes, "
             "length(o.jd_text) AS jd_len, c.stage, c.headcount, c.sector, "
             "c.website, c.enrich_status, c.lat, c.lon")
+
+# Last-touch columns: correlated scalar subqueries, fine at personal-tracker
+# scale; company-level contacts count for every row of that company.
+CONTACT_COLS = (
+    "(SELECT MAX(e.occurred_at) FROM contact_events e WHERE e.direction='out' "
+    "AND (e.opportunity_id = o.id OR e.company_id = o.company_id)) AS last_out, "
+    "(SELECT MAX(e.occurred_at) FROM contact_events e WHERE e.direction='in' "
+    "AND (e.opportunity_id = o.id OR e.company_id = o.company_id)) AS last_in")
 
 
 def _statuses(param: str) -> tuple:
@@ -126,7 +134,8 @@ def jobs(statuses: str = "live"):
     conn = db.connect_ro()
     try:
         rows = _rows(conn,
-                     f"SELECT {JOB_COLS}, substr(o.jd_text, 1, 2000) AS jd_text "
+                     f"SELECT {JOB_COLS}, {CONTACT_COLS}, "
+                     "substr(o.jd_text, 1, 2000) AS jd_text "
                      "FROM opportunities o "
                      "LEFT JOIN companies c ON c.id = o.company_id "
                      f"WHERE o.status IN ({marks}) "
@@ -146,7 +155,8 @@ def job_detail(job_id: int):
     conn = db.connect_ro()
     try:
         rows = _rows(conn,
-                     f"SELECT {JOB_COLS}, o.jd_text FROM opportunities o "
+                     f"SELECT {JOB_COLS}, {CONTACT_COLS}, o.jd_text "
+                     "FROM opportunities o "
                      "LEFT JOIN companies c ON c.id = o.company_id WHERE o.id=?",
                      (job_id,))
     finally:
@@ -177,11 +187,16 @@ def meta():
                            "ORDER BY started_at DESC, id DESC LIMIT 1")
         sweep = _rows(conn, "SELECT started_at FROM run_log WHERE skill='ats-pull' "
                             "AND status='ok' ORDER BY started_at DESC, id DESC LIMIT 1")
+        sug_open = conn.execute("SELECT COUNT(*) AS n FROM suggestions "
+                                "WHERE status='open'").fetchone()["n"]
+        mail_last = _rows(conn, "SELECT started_at, status, summary FROM run_log "
+                                "WHERE skill='mail-scan' "
+                                "ORDER BY started_at DESC, id DESC LIMIT 1")
     finally:
         conn.close()
     counts = {"live": sum(by_status.get(s, 0) for s in LIVE), **by_status,
               "high": by_pri.get("high", 0), "medium": by_pri.get("medium", 0),
-              "low": by_pri.get("low", 0)}
+              "low": by_pri.get("low", 0), "suggestions_open": sug_open}
     # the ATS page's "watching" ledger. A malformed sources.toml must degrade
     # the ledger, never 500 the whole dashboard.
     try:
@@ -190,11 +205,20 @@ def meta():
     except Exception:  # noqa: BLE001
         boards = 0
     ats = {"boards": boards, "last_sweep": sweep[0] if sweep else None}
+    # reply-scan state for the consent banner + transparency footer: consent is
+    # the data/mail_scan_enabled marker, never implied by the alert-feed creds
+    load_env()
+    if not os.environ.get("CAREER_IMAP_PASS"):
+        mail_state = "no-creds"
+    else:
+        mail_state = "on" if pull.MAIL_CONSENT.exists() else "off"
     out = {"counts": counts,
            "families": sorted({role_family(r["role"]) for r in live_rows}),
            "stages": sorted({r["stage"] for r in live_rows if r["stage"]}),
            "sources": sorted({r["source"] for r in live_rows}),
            "ats": ats,
+           "mail_scan": {"state": mail_state,
+                         "last": mail_last[0] if mail_last else None},
            "last_check": last[0] if last else None}
     if DEMO:
         out["demo"] = True      # the front end's cue to raise the demo banner
@@ -259,6 +283,123 @@ def post_bulk(body: BulkBody):
         raise HTTPException(422, str(e))
 
 
+# ---- suggestions / contacts / timeline (spec 2026-09-04) ----
+# Accept/dismiss stay open in demo like status/note/bulk: triage IS the demo,
+# and the demo DB carries no suggestions anyway.
+
+@app.get("/api/suggestions")
+def suggestions():
+    conn = db.connect_ro()
+    try:
+        rows = _rows(conn,
+                     "SELECT s.id, s.kind, s.opportunity_id, s.evidence, s.created_at, "
+                     "o.company, o.role, o.status, m.from_addr, m.subject, m.sent_at "
+                     "FROM suggestions s "
+                     "JOIN opportunities o ON o.id = s.opportunity_id "
+                     "LEFT JOIN email_messages m ON m.id = s.email_message_id "
+                     "WHERE s.status='open' ORDER BY s.created_at DESC, s.id DESC")
+    finally:
+        conn.close()
+    return {"suggestions": rows, "total": len(rows)}
+
+
+def _suggestion_error(e: ValueError):
+    return HTTPException(409 if "already" in str(e) else 404, str(e))
+
+
+@app.post("/api/suggestions/{sug_id}/accept")
+def post_accept_suggestion(sug_id: int, request: Request):
+    _require_json(request)   # bodyless POST — the content-type gate IS the CSRF defense
+    try:
+        return actions.accept_suggestion(sug_id)
+    except ValueError as e:
+        raise _suggestion_error(e)
+
+
+@app.post("/api/suggestions/{sug_id}/dismiss")
+def post_dismiss_suggestion(sug_id: int, request: Request):
+    _require_json(request)   # see accept — a forged form POST must never resolve a suggestion
+    try:
+        return actions.dismiss_suggestion(sug_id)
+    except ValueError as e:
+        raise _suggestion_error(e)
+
+
+class ContactBody(BaseModel):
+    direction: str
+    occurred_at: str | None = Field(None, max_length=32)
+    note: str = Field("", max_length=500)
+
+
+@app.post("/api/jobs/{job_id}/contact")
+def post_contact(job_id: int, body: ContactBody):
+    try:
+        return actions.log_contact(opportunity_id=job_id, direction=body.direction,
+                                   occurred_at=body.occurred_at or None,
+                                   note=body.note)
+    except ValueError as e:
+        raise HTTPException(404 if "no opportunity" in str(e) else 422, str(e))
+
+
+class DomainBody(BaseModel):
+    domain: str = Field(..., max_length=253)
+
+
+@app.post("/api/companies/{company_id}/domain")
+def post_company_domain(company_id: int, body: DomainBody):
+    try:
+        return actions.add_company_domain(company_id, body.domain)
+    except ValueError as e:
+        raise HTTPException(404 if "no company" in str(e) else 422, str(e))
+
+
+@app.get("/api/jobs/{job_id}/timeline")
+def timeline(job_id: int):
+    """Merged stage + contact history for the detail panel, newest first.
+    Contact events attach by row OR by the row's company (company-level touches
+    count for every posting there)."""
+    conn = db.connect_ro()
+    try:
+        job = conn.execute("SELECT id, company_id FROM opportunities WHERE id=?",
+                           (job_id,)).fetchone()
+        if job is None:
+            raise HTTPException(404, "no such job")
+        stages = _rows(conn,
+                       "SELECT 'stage' AS kind, occurred_at, from_status, to_status, "
+                       "source, note FROM stage_events WHERE opportunity_id=?",
+                       (job_id,))
+        contacts = _rows(conn,
+                         "SELECT 'contact' AS kind, occurred_at, direction, channel, "
+                         "subject, snippet, created_by FROM contact_events "
+                         "WHERE opportunity_id=? "
+                         "OR (company_id IS NOT NULL AND company_id=?)",
+                         (job_id, job["company_id"]))
+    finally:
+        conn.close()
+    events = sorted(stages + contacts, key=lambda e: e["occurred_at"] or "",
+                    reverse=True)
+    return {"events": events, "total": len(events)}
+
+
+# ---- reply-scan consent (data/mail_scan_enabled marker) ----
+
+@app.post("/api/mail-scan/enable")
+async def mail_scan_enable(request: Request):
+    _demo_block()
+    _require_json(request)
+    pull.MAIL_CONSENT.parent.mkdir(parents=True, exist_ok=True)
+    pull.MAIL_CONSENT.write_text(datetime.now().isoformat(timespec="seconds"))
+    return {"mail_scan": "on"}
+
+
+@app.post("/api/mail-scan/disable")
+async def mail_scan_disable(request: Request):
+    _demo_block()
+    _require_json(request)
+    pull.MAIL_CONSENT.unlink(missing_ok=True)
+    return {"mail_scan": "off"}
+
+
 def _ingest(payload: list[dict]) -> dict:
     """The blocking half of /api/add. Kept sync and handed to a worker thread so
     the SQLite writes stay off the event loop, exactly as they did when this was
@@ -305,6 +446,35 @@ async def add_jobs(request: Request):
     if not isinstance(payload, list) or not all(isinstance(i, dict) for i in payload):
         raise HTTPException(422, "expected a JSON list of postings")
     return await asyncio.to_thread(_ingest, payload)
+
+
+@app.post("/api/add-url")
+async def add_url_endpoint(request: Request):
+    """Paste-a-link: fetch the pasted posting URL, parse (board API -> JSON-LD ->
+    fallback), warn on gate failures, store + score. Body read by hand for the
+    same block-before-parse reason as /api/add; _demo_block is a security
+    boundary here — the public demo must never fetch visitor-supplied URLs."""
+    _demo_block()
+    _require_json(request)
+    try:
+        body = await request.json()
+    except ValueError:
+        raise HTTPException(422, "expected a JSON object with a url")
+    if not isinstance(body, dict) or not isinstance(body.get("url"), str):
+        raise HTTPException(422, "expected a JSON object with a url")
+    manual = body.get("manual")
+    if manual is not None and not isinstance(manual, dict):
+        raise HTTPException(422, "manual must be an object")
+    try:
+        result = await asyncio.to_thread(
+            add_url.add_from_url, body["url"][:2000], bool(body.get("force")), manual)
+    except add_url.BadUrl as e:
+        raise HTTPException(422, str(e))
+    except add_url.FetchFailed as e:
+        raise HTTPException(502, f"couldn't fetch that page: {e}")
+    if result.get("outcome") == "excluded":
+        raise HTTPException(422, result.get("message", "nothing stored"))
+    return result
 
 
 @app.post("/api/email-saved")
@@ -359,6 +529,22 @@ def pull_status():
     return pull.STATE
 
 
+@app.post("/api/update")
+async def api_update(request: Request):
+    """git pull --ff-only + uv sync. Blocked while a check runs (feeds mustn't
+    have the code swapped under them); never runs migrations — next boot does."""
+    _demo_block()
+    _require_json(request)
+    if pull.STATE["running"]:
+        raise HTTPException(409, "a check is running — try again when it finishes")
+    try:
+        return await asyncio.to_thread(update.run_update)
+    except update.UpdateBlocked as e:
+        raise HTTPException(409, str(e))
+    except update.UpdateFailed as e:
+        raise HTTPException(502, str(e))
+
+
 STATIC = Path(__file__).parent / "static"
 
 
@@ -367,6 +553,7 @@ def wizard_state():
     s = wizard.state()
     s["presets"] = {k: {"label": v["label"]} for k, v in wizard.load_presets().items()}
     s["sizes"] = list(wizard.SIZE_PRESETS)
+    s["prefill"] = wizard.prefill()
     return s
 
 

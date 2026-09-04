@@ -78,19 +78,34 @@ def passes_company_gates(company, jd_text, cfg: Config) -> bool:
     return not any(r.lower() in text for r in cfg.size_red_flags)
 
 
-def matches(job: Job, cfg: Config) -> bool:
-    """Ingest hard gates. False = never stored."""
+def gate_warnings(job: Job, cfg: Config) -> list:
+    """One human-readable message per failing ingest gate, in matches() order.
+    Empty list ⇔ the job passes. matches() delegates here so the two can't drift;
+    paste-intent callers show these instead of silently dropping the row."""
+    warnings = []
     if cfg.interns_only and not is_internship(job.role, job.jd_text,
                                               job.employment_type):
-        return False
+        warnings.append("not an internship — this pipeline is internships only")
     title = (job.role or "").lower()
-    if any(k in title for k in cfg.exclude_keywords):
-        return False
+    for k in cfg.exclude_keywords:
+        if k in title:
+            warnings.append(f"title matches exclude keyword '{k}'")
+            break
     if not passes_company_gates(job.company, job.jd_text, cfg):
-        return False
+        warnings.append("company is on your blocklist or the JD has size red flags")
     if not cfg.allow_remote and detect_work_mode(job.location, job.jd_text) == "remote":
-        return False
-    return is_nyc_metro(job.location)
+        warnings.append("remote role and allow_remote is off")
+    if not is_nyc_metro(job.location):
+        if not job.location:
+            warnings.append("no location found on the page — can't confirm NYC/NJ")
+        else:
+            warnings.append(f"'{job.location}' is outside the NYC/NJ metro")
+    return warnings
+
+
+def matches(job: Job, cfg: Config) -> bool:
+    """Ingest hard gates. False = never stored."""
+    return not gate_warnings(job, cfg)
 
 
 def company_tier(stage, headcount, cfg: Config) -> str:

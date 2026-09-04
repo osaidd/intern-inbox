@@ -9,6 +9,7 @@ HARD RED LINE: ATS rows are INTERNSHIPS ONLY — is_internship()
 gates every row here (any intern signal in title/JD/type includes; the intern word
 supersedes a full-time type label), and feeds/ats_pull.py re-checks before insert."""
 import json
+import re
 import time
 import urllib.request
 from html import unescape
@@ -89,6 +90,63 @@ def parse_greenhouse(data: dict, org: str, cfg: Config) -> list:
                                               or e.get("updated_at")),
                         jd_text=jd or None))
     return jobs
+
+
+def _norm_url(u: str) -> str:
+    u = (u or "").strip().lower()
+    u = u.split("#", 1)[0].split("?", 1)[0]
+    return u.rstrip("/")
+
+
+def find_ashby(data: dict, org: str, url: str) -> Job | None:
+    """URL→posting lookup for a pasted Ashby URL. Applies NO gates — a paste is
+    user intent, so remote/unlisted/non-intern entries are returned too; callers
+    run gate_warnings. Matches the exact jobUrl or the posting-UUID path segment
+    (covers /application suffixes and query junk). Caller stamps Job.source."""
+    target = _norm_url(url)
+    target_segs = set(target.split("/"))
+    for e in data.get("jobs") or []:
+        job_url = e.get("jobUrl") or ""
+        if not job_url:
+            continue
+        if _norm_url(job_url) != target and \
+           _norm_url(job_url).rsplit("/", 1)[-1] not in target_segs:
+            continue
+        cands = ([e.get("location")]
+                 + [s.get("location") for s in e.get("secondaryLocations") or []])
+        loc = next((l for l in cands if is_nyc_metro(l)), None) or e.get("location")
+        jd = e.get("descriptionPlain") or extract_text(e.get("descriptionHtml") or "")
+        comp = e.get("compensation") or {}
+        salary = (comp.get("scrapeableCompensationSalarySummary")
+                  or comp.get("compensationTierSummary"))
+        return Job(company=_org_name(org), role=(e.get("title") or "").strip(),
+                   url=job_url, location=loc,
+                   posted_date=_iso_date(e.get("publishedAt")), jd_text=jd or None,
+                   employment_type=e.get("employmentType"), salary_text=salary)
+    return None
+
+
+def find_greenhouse(data: dict, org: str, url: str) -> Job | None:
+    """URL→posting lookup for a pasted Greenhouse URL. NO gates (see find_ashby).
+    Matches the exact absolute_url or the numeric id in a /jobs/<id> path."""
+    target = _norm_url(url)
+    m = re.search(r"/jobs/(\d+)$", target)
+    want_id = int(m.group(1)) if m else None
+    for e in data.get("jobs") or []:
+        if _norm_url(e.get("absolute_url") or "") != target and \
+           (want_id is None or e.get("id") != want_id):
+            continue
+        cands = ([(e.get("location") or {}).get("name")]
+                 + [o.get("location") or o.get("name") for o in e.get("offices") or []])
+        loc = (next((l for l in cands if is_nyc_metro(l)), None)
+               or (e.get("location") or {}).get("name"))
+        jd = extract_text(unescape(e.get("content") or ""))
+        return Job(company=e.get("company_name") or _org_name(org),
+                   role=(e.get("title") or "").strip(), url=e.get("absolute_url"),
+                   location=loc,
+                   posted_date=_iso_date(e.get("first_published") or e.get("updated_at")),
+                   jd_text=jd or None)
+    return None
 
 
 def _get_json(url: str, opener, ua: dict) -> dict:

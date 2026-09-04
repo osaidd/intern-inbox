@@ -13,7 +13,23 @@ async function boot() {
     l.innerHTML = `<input type="checkbox" value="${key}"><b>${p.label}</b>`;
     boxes.appendChild(l);
   }
-  boxes.querySelector("input").checked = true;
+  const pf = s.prefill;
+  if (pf && pf.roles && pf.roles.length) {
+    for (const i of boxes.querySelectorAll("input"))
+      i.checked = pf.roles.includes(i.value);
+  } else {
+    boxes.querySelector("input").checked = true;
+  }
+  if (pf) {
+    const r = document.querySelector(`input[name="size"][value="${pf.size}"]`);
+    if (r) r.checked = true;
+    if (pf.size === "custom" && pf.custom_cap) $("customCap").value = pf.custom_cap;
+    $("startupsOnly").checked = !!pf.startups_only;
+    $("avoid").value = (pf.avoid || []).join(", ");
+    $("emailAddr").value = pf.email_address || "";
+    if (pf.imap_saved) $("imapPass").placeholder = "saved — leave blank to keep";
+    $("mailScan").checked = !!pf.mail_scan;
+  }
   if (RERUN_NEEDS_FORCE)
     show("Heads up: your config was personalized by /setup. Finishing here replaces it.");
 }
@@ -30,6 +46,7 @@ function choices() {
     avoid: $("avoid").value.split(",").map(s => s.trim()).filter(Boolean),
     email_address: $("emailAddr").value.trim(),
     imap_pass: $("imapPass").value,
+    mail_scan: $("mailScan").checked,
     force: RERUN_NEEDS_FORCE,
   };
 }

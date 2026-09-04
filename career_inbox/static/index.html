@@ -11,11 +11,24 @@
   <span class="grow"></span>
   <div class="seg" id="viewSeg"><button id="viewTable" class="on">Table</button><button id="viewMap">Map</button></div>
   <input id="search" type="search" placeholder="Search company, role, notes…">
+  <form id="addForm"><input id="addUrl" type="url" placeholder="Paste a posting URL…"><button id="addGo" class="deck" type="submit">Add</button></form>
   <button id="checkNow" class="deck">Check now</button><button id="csv" class="deck">CSV</button>
   <button id="emailSaved" class="deck">Email ♥</button>
+  <button id="update" class="deck" title="git pull + uv sync">Update</button>
   <button id="prefs" class="deck" title="Preferences">⚙</button>
 </header>
 <div id="pagebar" class="sub" hidden>ATS boards — internships only, pulled daily from the Ashby + Greenhouse APIs of companies already in the pipeline. Listings with no intern signal in title, JD, or type are removed at the source.</div>
+<div id="manualPanel" hidden>
+  <div id="manualMsg" class="sub"></div>
+  <textarea id="manualJd" placeholder="Paste the job description text here"></textarea>
+  <div class="manualrow">
+    <input id="manualCompany" placeholder="Company">
+    <input id="manualRole" placeholder="Role title">
+    <input id="manualLoc" placeholder="Location (e.g. New York, NY)">
+    <button id="manualAdd" class="deck">Add it</button>
+    <button id="manualCancel" class="deck">Cancel</button>
+  </div>
+</div>
 <div id="filters">
   <select id="fStatus"></select><select id="fPri"></select><select id="fFam"></select>
   <select id="fStage"></select><select id="fMode"></select><select id="fSrc"></select><select id="fTerm"></select>

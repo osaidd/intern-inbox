@@ -62,6 +62,10 @@ class Config:
     linkedin_lookback_days: int
     mail_sources: MailSources
     email: EmailConfig
+    # [mail_scan] is OPTIONAL (allow_late_stages precedent): existing personal
+    # career.toml files must keep loading without it.
+    mail_scan_enabled: bool = True
+    mail_scan_lookback_days: int = 30
 
 
 def load(path=None) -> Config:
@@ -96,6 +100,8 @@ def load(path=None) -> Config:
                                  sender=ms["wellfound_sender"])),
         email=EmailConfig(enabled=e["enabled"], to=e["to"], smtp_host=e["smtp_host"],
                           smtp_port=e["smtp_port"], smtp_user=e["smtp_user"]),
+        mail_scan_enabled=raw.get("mail_scan", {}).get("enabled", True),
+        mail_scan_lookback_days=raw.get("mail_scan", {}).get("lookback_days", 30),
     )
 
 

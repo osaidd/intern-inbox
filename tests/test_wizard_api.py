@@ -66,3 +66,13 @@ def test_complete_requires_json_content_type(client):
     r = client.post("/api/wizard/complete", content=b"x=1",
                     headers={"content-type": "application/x-www-form-urlencoded"})
     assert r.status_code == 415
+
+
+def test_state_carries_prefill(client, tmp_path, monkeypatch):
+    from career_inbox import pull
+    monkeypatch.setattr(pull, "MAIL_CONSENT", tmp_path / "consent")
+    assert client.get("/api/wizard/state").json()["prefill"] is None
+    assert client.post("/api/wizard/complete", json=BODY).status_code == 200
+    pf = client.get("/api/wizard/state").json()["prefill"]
+    assert "swe_ai" in pf["roles"] and pf["size"] == "tiny"
+    assert pf["mail_scan"] is False and pf["imap_saved"] is False
