@@ -53,12 +53,24 @@ def write_stamp() -> None:
     _stamp_write(STAMP)
 
 
-def _linkedin():
-    import os
+def _mail_gate():
+    """None when the configured mail provider is ready; else the skip message."""
+    from career_hunt import config as ch_config
     from feeds.envfile import load_env
+    from feeds.mail_auth import ready
     load_env()
-    if not os.environ.get("CAREER_IMAP_PASS"):
-        return None, "not configured (no Gmail app password — see SETUP.md)"
+    ok, reason = ready(ch_config.load())
+    if ok:
+        return None
+    if "CAREER_IMAP_PASS" in reason:    # historical wording, dashboards key on it
+        return "not configured (no Gmail app password — see SETUP.md)"
+    return f"not configured ({reason})"
+
+
+def _linkedin():
+    msg = _mail_gate()
+    if msg:
+        return None, msg
     from feeds.linkedin_mail_pull import main
     return main(trigger="scheduled")  # feeds share run_log's trigger enum
 
@@ -107,11 +119,9 @@ def _mail_scan():
         return None, "off — enable reply tracking in the app"
     if not _stamp_due(MAIL_STAMP):
         return None  # skipped (daily budget)
-    import os
-    from feeds.envfile import load_env
-    load_env()
-    if not os.environ.get("CAREER_IMAP_PASS"):
-        return None, "not configured (no Gmail app password — see SETUP.md)"
+    msg = _mail_gate()
+    if msg:
+        return None, msg
     try:
         from feeds.mail_scan import main
         return main(trigger="scheduled")  # 'new' = new suggestions

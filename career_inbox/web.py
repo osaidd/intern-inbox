@@ -20,6 +20,7 @@ from career_hunt.models import Job  # noqa: E402
 from career_hunt.store import get_or_create_company, insert_job  # noqa: E402
 from career_hunt.term import term  # noqa: E402
 from career_inbox import actions, add_url, pull, update, wizard  # noqa: E402
+from feeds import mail_auth, outlook_auth  # noqa: E402
 from feeds.ats_pull import load_orgs  # noqa: E402
 from feeds.envfile import load_env  # noqa: E402
 
@@ -212,9 +213,11 @@ def meta():
         boards = 0
     ats = {"boards": boards, "last_sweep": sweep[0] if sweep else None}
     # reply-scan state for the consent banner + transparency footer: consent is
-    # the data/mail_scan_enabled marker, never implied by the alert-feed creds
+    # the data/mail_scan_enabled marker, never implied by working mail creds
     load_env()
-    if not os.environ.get("CAREER_IMAP_PASS"):
+    cfg_now = ch_config.load()
+    ready_ok, _reason = mail_auth.ready(cfg_now)
+    if not ready_ok:
         mail_state = "no-creds"
     else:
         mail_state = "on" if pull.MAIL_CONSENT.exists() else "off"
@@ -223,7 +226,7 @@ def meta():
            "stages": sorted({r["stage"] for r in live_rows if r["stage"]}),
            "sources": sorted({r["source"] for r in live_rows}),
            "ats": ats,
-           "mail_scan": {"state": mail_state,
+           "mail_scan": {"state": mail_state, "provider": cfg_now.mail_provider,
                          "last": mail_last[0] if mail_last else None},
            "due": due,
            "last_check": last[0] if last else None}
@@ -417,6 +420,51 @@ def timeline(job_id: int):
     events = sorted(stages + contacts, key=lambda e: e["occurred_at"] or "",
                     reverse=True)
     return {"events": events, "total": len(events)}
+
+
+# ---- Outlook device-code sign-in (feeds/outlook_auth; single-user flow) ----
+
+OUTLOOK_FLOW = {"device_code": None}
+
+
+@app.post("/api/outlook/start")
+async def outlook_start(request: Request):
+    _demo_block()
+    _require_json(request)
+    cid = outlook_auth.client_id(ch_config.load())
+    if not cid:
+        raise HTTPException(409, "Outlook needs a client id — set "
+                                 "[mail].outlook_client_id (see SETUP.md)")
+    try:
+        flow = await asyncio.to_thread(outlook_auth.start_device_flow, cid)
+    except RuntimeError as e:
+        raise HTTPException(502, str(e))
+    OUTLOOK_FLOW["device_code"] = flow["device_code"]
+    return {"user_code": flow["user_code"],
+            "verification_uri": flow.get("verification_uri",
+                                         "https://microsoft.com/devicelogin")}
+
+
+@app.post("/api/outlook/poll")
+async def outlook_poll(request: Request):
+    _demo_block()
+    _require_json(request)
+    if not OUTLOOK_FLOW["device_code"]:
+        raise HTTPException(409, "no sign-in in progress — press Connect first")
+    out = await asyncio.to_thread(outlook_auth.poll_once,
+                                  outlook_auth.client_id(ch_config.load()),
+                                  OUTLOOK_FLOW["device_code"])
+    if out["status"] != "pending":
+        OUTLOOK_FLOW["device_code"] = None
+    return out
+
+
+@app.post("/api/outlook/disconnect")
+async def outlook_disconnect(request: Request):
+    _demo_block()
+    _require_json(request)
+    outlook_auth.disconnect()
+    return {"status": "disconnected"}
 
 
 # ---- reply-scan consent (data/mail_scan_enabled marker) ----

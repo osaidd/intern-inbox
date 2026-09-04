@@ -313,3 +313,28 @@ def test_email_saved_409_when_empty(client, monkeypatch):
                 json={"ids": [x["id"] for x in client.get("/api/jobs").json()["jobs"]],
                       "action": "kill"})
     assert client.post("/api/email-saved", json={}).status_code == 409
+
+
+def test_outlook_endpoints(client, monkeypatch):
+    from career_inbox import web
+    monkeypatch.setattr(web.outlook_auth, "client_id", lambda cfg: "cid")
+    monkeypatch.setattr(web.outlook_auth, "start_device_flow",
+                        lambda cid: {"device_code": "dc", "user_code": "ABCD",
+                                     "verification_uri": "https://m.co/login"})
+    r = client.post("/api/outlook/start", json={})
+    assert r.status_code == 200 and r.json()["user_code"] == "ABCD"
+    monkeypatch.setattr(web.outlook_auth, "poll_once",
+                        lambda cid, dc: {"status": "pending"})
+    assert client.post("/api/outlook/poll", json={}).json()["status"] == "pending"
+    monkeypatch.setattr(web.outlook_auth, "poll_once",
+                        lambda cid, dc: {"status": "connected"})
+    assert client.post("/api/outlook/poll", json={}).json()["status"] == "connected"
+    # flow consumed — polling again without a start is a 409
+    assert client.post("/api/outlook/poll", json={}).status_code == 409
+    monkeypatch.setattr(web.outlook_auth, "client_id", lambda cfg: "")
+    assert client.post("/api/outlook/start", json={}).status_code == 409
+    called = {}
+    monkeypatch.setattr(web.outlook_auth, "disconnect",
+                        lambda: called.setdefault("yes", True))
+    assert client.post("/api/outlook/disconnect", json={}).status_code == 200
+    assert called == {"yes": True}

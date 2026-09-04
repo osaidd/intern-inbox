@@ -27,8 +27,9 @@ The app opens in your browser with a 3-step setup. That's the whole install.
 
 Either paste installs what is missing, downloads the project to
 `~/intern-inbox`, and starts it. The three steps ask which roles you want, how
-big a company you will consider, and — optional — a Gmail app password so the
-app can read your job-alert emails. Answer them and the first pull runs.
+big a company you will consider, and — optional — a mail connection (Gmail app
+password, Outlook sign-in — school accounts work — or any IMAP host) so the app
+can read your job-alert emails. Answer them and the first pull runs.
 (Already have Claude Code? The paste opens the project there instead — see
 [SETUP.md](SETUP.md).)
 
@@ -75,7 +76,7 @@ the wizard picks from your checkboxes. Once you have real rows,
 | Source | What you get |
 |---|---|
 | Ashby + Greenhouse posting APIs | The shared list of NYC company job boards, swept once a day |
-| Your job-alert emails | LinkedIn, Built In, and Wellfound alerts, read from your Gmail inbox |
+| Your job-alert emails | LinkedIn, Built In, and Wellfound alerts, read from your Gmail, Outlook, or IMAP mailbox |
 | SimplifyJobs GitHub lists | The big public internship lists |
 | Indeed + Google, via JobSpy (optional) | Broader board search — off by default; `uv sync --extra jobspy` turns it on |
 
@@ -103,8 +104,9 @@ ATS/job-alert senders and from the domains of companies already in your tracker,
 and your Sent folder only for mail addressed to those tracked-company domains.
 It connects read-only — nothing is marked read, moved, or sent — and stores
 headers plus a snippet of at most 200 characters in the local SQLite file.
-Nothing leaves your machine, the app password lives only in the gitignored
-`config/.env` (revocable any time in your Google account), and the scan never
+Nothing leaves your machine, the credentials live only in gitignored files —
+`config/.env` for app passwords, `data/` for the Outlook sign-in token, both
+revocable any time in your Google or Microsoft account — and the scan never
 changes a row's stage by itself — it only files suggestions you confirm in the
 app.
 

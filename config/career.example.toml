@@ -50,6 +50,19 @@ urls = [
 sender = "jobs-noreply@linkedin.com"
 lookback_days = 14
 
+[mail]
+# Where your job mail lives — a school account keeps personal mail out entirely.
+#   gmail   (default) imap.gmail.com + the 16-char app password
+#   outlook Microsoft sign-in from the app (password IMAP is dead at Microsoft;
+#           works for personal and school/M365 accounts)
+#   imap    any other provider: set imap_host (or CAREER_IMAP_HOST in .env)
+provider = "gmail"
+imap_host = ""
+# Outlook only: the Azure public-client app id this install signs in through.
+# Not a secret. One registration serves everyone — SETUP.md "Outlook" has the
+# 5-minute walkthrough; installs from this repo can share the id shipped here.
+outlook_client_id = ""
+
 [mail_scan]
 # Reply & outreach tracking (feeds/mail_scan.py). This section is OPTIONAL —
 # omit it entirely and these defaults apply. The scan additionally requires the
