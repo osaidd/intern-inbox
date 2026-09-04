@@ -218,3 +218,57 @@ def test_load_presets_contract():
         assert preset.get("label"), key
         assert preset.get("profile_keywords"), key
         assert preset.get("target_titles"), key
+
+
+# ---------------- prefill + reply-scan consent (spec 2026-09-04) ----------------
+def _isolate_consent(tmp_path, monkeypatch):
+    from career_inbox import pull
+    marker = tmp_path / "mail_scan_enabled"
+    monkeypatch.setattr(pull, "MAIL_CONSENT", marker)
+    return marker
+
+
+def test_prefill_round_trip(paths, tmp_path, monkeypatch):
+    _isolate_consent(tmp_path, monkeypatch)
+    assert wizard.prefill() is None                       # no config yet
+    wizard.apply(dict(BASE, roles=["swe_ai", "product"], size="mid",
+                      avoid=["Acme Corp"], email_address="me@gmail.com",
+                      imap_pass="abcd efgh ijkl mnop", mail_scan=True), force=False)
+    pf = wizard.prefill()
+    assert {"swe_ai", "product"} <= set(pf["roles"])
+    assert pf["size"] == "mid" and pf["custom_cap"] is None
+    assert pf["startups_only"] is True and pf["avoid"] == ["Acme Corp"]
+    assert pf["email_address"] == "me@gmail.com"
+    assert pf["imap_saved"] is True and pf["mail_scan"] is True
+    assert "abcd" not in str(pf)                          # never the secret itself
+
+
+def test_prefill_custom_cap_foreign_and_broken(paths, tmp_path, monkeypatch):
+    _isolate_consent(tmp_path, monkeypatch)
+    user, _ = paths
+    wizard.apply(dict(BASE, size="custom", custom_cap=70), force=False)
+    pf = wizard.prefill()
+    assert pf["size"] == "custom" and pf["custom_cap"] == 70
+    # a foreign (/setup-style) config still prefills best-effort, never raises
+    user.write_text(ch_config.EXAMPLE_PATH.read_text())
+    pf = wizard.prefill()
+    assert pf is not None and pf["startups_only"] is True and pf["avoid"] == []
+    user.write_text("not [valid toml")
+    assert wizard.prefill() is None
+
+
+def test_mail_scan_checkbox_controls_consent_marker(paths, tmp_path, monkeypatch):
+    marker = _isolate_consent(tmp_path, monkeypatch)
+    wizard.apply(dict(BASE, mail_scan=True), force=False)
+    assert marker.exists()
+    wizard.apply(dict(BASE, mail_scan=False), force=False)   # the form is the truth
+    assert not marker.exists()
+    marker.write_text("x")
+    wizard.apply(dict(BASE), force=False)                    # absent key: untouched
+    assert marker.exists()
+
+
+def test_imap_saved_false_without_password(paths, tmp_path, monkeypatch):
+    _isolate_consent(tmp_path, monkeypatch)
+    wizard.apply(dict(BASE, email_address="me@gmail.com"), force=False)
+    assert wizard.prefill()["imap_saved"] is False

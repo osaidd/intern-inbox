@@ -61,6 +61,26 @@ def test_hydrates_scores_and_stamps(tmp_path, monkeypatch):
     conn.close()
 
 
+def test_backfill_scores_jd_bearing_rows(tmp_path, monkeypatch):
+    """Rows born WITH jd_text (paste, /api/add) never enter the fetch loop — the
+    zero-network backfill scores them; excluded titles and dead rows stay NULL."""
+    db = _db(tmp_path, monkeypatch)
+    db.insert("opportunities", _row("h1", jd_text="LLM agents with RAG for ops. " * 30,
+                                    url="https://boards.example.com/j/9"))
+    db.insert("opportunities", _row("h2", role="Senior AI Engineer", jd_text="LLM work",
+                                    url="https://boards.example.com/j/10"))
+    db.insert("opportunities", _row("h3", jd_text="x", status="dead",
+                                    url="https://boards.example.com/j/11"))
+    stats = jd_hydrate.main(_opener=fake_opener, _sleep=lambda s: None)
+    assert stats["score_backfilled"] == 1
+    conn = db.connect()
+    scores = {r["dedupe_hash"]: r["score"] for r in
+              conn.execute("SELECT dedupe_hash, score FROM opportunities")}
+    conn.close()
+    assert scores["h1"] is not None
+    assert scores["h2"] is None and scores["h3"] is None
+
+
 def test_outbound_fetch_sends_a_neutral_user_agent(monkeypatch, tmp_path):
     """jd_hydrate fetches ARBITRARY posting hosts, so the UA must NOT carry the
     user's contact address (that stays reserved for the known board APIs)."""

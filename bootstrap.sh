@@ -2,9 +2,9 @@
 # intern-inbox bootstrap — one command from a fresh Mac (or Linux) to a running app.
 #   curl -LsSf https://raw.githubusercontent.com/osaidd/intern-inbox/main/bootstrap.sh | sh
 # Installs uv if missing, clones (or updates) the repo into ~/intern-inbox,
-# installs dependencies, then opens the project in Claude Code if the CLI is
-# present — otherwise starts the app, which opens the browser on a 3-step
-# setup.
+# installs dependencies, then starts the app (browser opens on a 3-step setup).
+# If Claude Code is installed it ASKS whether to open the project there instead
+# — plain Enter keeps the browser app the docs promise.
 set -e
 
 if ! command -v git >/dev/null 2>&1; then
@@ -36,10 +36,18 @@ cd "$DIR"
 echo "Installing dependencies (well under a minute on a normal connection)..."
 uv sync
 
-# zero-friction handoff: Claude Code if it's here, otherwise straight into the app
-if command -v claude >/dev/null 2>&1; then
-  printf '\nFound Claude Code — opening the project in it now. Type /setup when it loads.\n'
-  cd "$DIR" && exec claude
+# Claude Code is optional depth, not the default path — ask, never hijack.
+# stdin is the piped script itself, so the answer must come from /dev/tty;
+# with no TTY (CI, odd shells) fall through to the browser app the docs promise.
+if command -v claude >/dev/null 2>&1 && [ -r /dev/tty ]; then
+  printf '\nFound Claude Code. Open the project there for guided setup instead of the browser app? [y/N] '
+  IFS= read -r ans < /dev/tty || ans=""
+  case "$ans" in
+    [Yy]*)
+      printf '\nOpening in Claude Code — type /setup when it loads.\n'
+      cd "$DIR" && exec claude
+      ;;
+  esac
 fi
 printf '\nStarting Intern Inbox — your browser will open with a 3-step setup.\n'
 printf 'To stop: Ctrl+C.  To start again later:  cd %s && uv run intern-inbox --open\n\n' "$DIR"

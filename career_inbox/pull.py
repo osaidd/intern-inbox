@@ -13,6 +13,11 @@ from career_hunt.geocode import geocode  # noqa: E402
 
 STAMP = ROOT / "data" / "jobspy_last_pull"
 ATS_STAMP = ROOT / "data" / "ats_last_pull"
+MAIL_STAMP = ROOT / "data" / "mail_scan_last_pull"
+# Consent marker for the reply/outreach scan: the feed runs ONLY while this file
+# exists. Written/removed by the app's enable-disable endpoints and the wizard
+# checkbox — never created implicitly.
+MAIL_CONSENT = ROOT / "data" / "mail_scan_enabled"
 GEO_BATCH = 10
 STATE = {"running": False, "started": None, "steps": {}}
 
@@ -97,6 +102,23 @@ def _jd_hydrate():
     return {"new": stats["hydrated"]}
 
 
+def _mail_scan():
+    if not MAIL_CONSENT.exists():
+        return None, "off — enable reply tracking in the app"
+    if not _stamp_due(MAIL_STAMP):
+        return None  # skipped (daily budget)
+    import os
+    from feeds.envfile import load_env
+    load_env()
+    if not os.environ.get("CAREER_IMAP_PASS"):
+        return None, "not configured (no Gmail app password — see SETUP.md)"
+    try:
+        from feeds.mail_scan import main
+        return main(trigger="scheduled")  # 'new' = new suggestions
+    finally:
+        _stamp_write(MAIL_STAMP)  # even on failure: one attempt per day
+
+
 def _geocode_batch():
     conn = db.connect()
     done = 0
@@ -118,7 +140,7 @@ def _geocode_batch():
 
 
 CONNECTORS = [("linkedin", _linkedin), ("github", _github), ("ats", _ats),
-              ("jobspy", _jobspy), ("jd", _jd_hydrate)]
+              ("jobspy", _jobspy), ("jd", _jd_hydrate), ("mail", _mail_scan)]
 
 
 def full_check(trigger: str = "manual") -> dict:

@@ -33,7 +33,8 @@ app can read your job-alert emails. Answer them and the first pull runs.
 [SETUP.md](SETUP.md).)
 
 After that the loop is: open the app, press **Check now**, triage the new rows.
-Run `git pull` now and then to pick up boards others have added.
+Press **Update** in the app (or run `git pull`) now and then to pick up boards
+others have added.
 
 The Windows script has been read line by line but never run on a real Windows
 machine. First Windows tester welcome: if it stops early, open an issue with
@@ -44,9 +45,13 @@ The long version, with troubleshooting: [SETUP.md](SETUP.md).
 ## What it is
 
 Internship listings from a few sources land in one list on your laptop. You mark
-each one new, shortlisted, applied, or dead. Nothing else. It only keeps
-**internships** in **New York City and New Jersey** — everything else is dropped
-before it reaches you.
+each one new, shortlisted, applied, or dead — the app keeps the history: when
+each row changed stage, when you last reached out, and how long a reply has been
+quiet. Found a posting somewhere else? Paste its URL into the box at the top and
+the app fetches the title, company, location, and description and scores the fit
+(LinkedIn links can't be fetched — the app asks you to paste the description
+instead). It only keeps **internships** in **New York City and New Jersey** —
+everything else is dropped before it reaches you.
 
 ## Requirements
 
@@ -89,6 +94,17 @@ from Google's favicon service and the map (once offices are geocoded) loads
 OpenStreetMap tiles, so those services see ordinary page-load requests. Your
 resume, profile, config, and pipeline never leave your machine. Resume files
 (`*.pdf`, `*.docx`) are gitignored so `git add -A` can never stage them.
+
+Reply tracking is **off until you turn it on** (wizard checkbox or the banner in
+the app). When on, the daily scan searches your inbox only for mail from known
+ATS/job-alert senders and from the domains of companies already in your tracker,
+and your Sent folder only for mail addressed to those tracked-company domains.
+It connects read-only — nothing is marked read, moved, or sent — and stores
+headers plus a snippet of at most 200 characters in the local SQLite file.
+Nothing leaves your machine, the app password lives only in the gitignored
+`config/.env` (revocable any time in your Google account), and the scan never
+changes a row's stage by itself — it only files suggestions you confirm in the
+app.
 
 ## After a week of data
 

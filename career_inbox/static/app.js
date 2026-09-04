@@ -162,6 +162,163 @@ async function loadMeta() {
   renderCounts();
   updateEmailBtn();
   demoBanner();
+  mailUi();
+}
+
+/* ---------------- reply-scan consent + review strip ----------------
+   Consent is explicit: the banner offers the scan once (dismiss persists in
+   localStorage), the strip surfaces what a scan found, and the footer says
+   honestly what the last scan searched. Never shown in demo mode. */
+function _mailDismissed() {
+  try { return localStorage.getItem("mailScanBannerDismissed") === "1"; }
+  catch { return false; }
+}
+
+function mailUi() {
+  const ms = (S.meta && S.meta.mail_scan) || null;
+  const open = (S.meta && S.meta.counts && S.meta.counts.suggestions_open) || 0;
+  const demo = S.meta && S.meta.demo;
+  // consent banner: creds exist, scan off, not dismissed
+  const wantBanner = ms && ms.state === "off" && !demo && !_mailDismissed();
+  let b = document.getElementById("mailbanner");
+  if (wantBanner && !b) {
+    b = document.createElement("div");
+    b.id = "mailbanner";
+    const txt = document.createElement("span");
+    txt.textContent = "Track replies & outreach from your email? Reads ONLY mail " +
+      "from job boards/ATS senders and to/from companies already in your tracker " +
+      "— read-only, stays on this machine. ";
+    b.appendChild(txt);
+    const on = el("button", "deck", "Turn on");
+    on.onclick = async () => {
+      try {
+        await postJSON("/api/mail-scan/enable", {});
+        showToast("reply tracking on — it runs with the daily check", "ok");
+        loadMeta();
+      } catch (e) { showToast(String(e.message || e).slice(0, 140), "err"); }
+    };
+    const what = el("button", "deck", "What it reads");
+    what.onclick = () => {
+      const d = document.getElementById("mailwhat");
+      if (d) d.hidden = !d.hidden;
+    };
+    const not = el("button", "deck", "Not now");
+    not.onclick = () => {
+      try { localStorage.setItem("mailScanBannerDismissed", "1"); } catch {}
+      b.remove();
+    };
+    b.append(on, what, not);
+    const detail = document.createElement("div");
+    detail.id = "mailwhat";
+    detail.hidden = true;
+    detail.textContent = "Once a day, with your other feeds: your INBOX is " +
+      "searched only for mail FROM known ATS/job-alert senders (Greenhouse, " +
+      "Ashby, Lever, LinkedIn notifications, …) and FROM the mail domains of " +
+      "companies already in your tracker; your Sent folder only for mail TO " +
+      "those tracked-company domains. Matching messages' headers and a short " +
+      "snippet are stored in the local database on this machine. Nothing is " +
+      "marked read, nothing is sent, nothing leaves your laptop, and the scan " +
+      "never changes a row's stage — it only files suggestions you confirm " +
+      "here. Turn it off any time; revoke the app password at " +
+      "myaccount.google.com to shut it out entirely.";
+    b.appendChild(detail);
+    document.querySelector("header").after(b);
+  } else if (!wantBanner && b) {
+    b.remove();
+  }
+  // review strip + transparency footer
+  const wantBar = ms && ms.state === "on" && !demo;
+  let bar = document.getElementById("sugbar");
+  if (!wantBar) { if (bar) bar.remove(); return; }
+  if (!bar) {
+    bar = document.createElement("div");
+    bar.id = "sugbar";
+    bar.append(el("span", "sug-head"), el("span", "grow"));
+    const foot = el("span", "sub sug-foot");
+    bar.appendChild(foot);
+    const off = el("button", "linklike", "turn off");
+    off.onclick = async () => {
+      try {
+        await postJSON("/api/mail-scan/disable", {});
+        showToast("reply tracking off", "warn");
+        loadMeta();
+      } catch (e) { showToast(String(e.message || e).slice(0, 140), "err"); }
+    };
+    bar.appendChild(off);
+    const panel = document.createElement("div");
+    panel.id = "sugpanel";
+    panel.hidden = true;
+    bar.appendChild(panel);
+    document.querySelector("header").after(bar);
+  }
+  const head = bar.querySelector(".sug-head");
+  head.textContent = "";
+  if (open > 0) {
+    const btn = el("button", "linklike sug-open",
+                   `Mail scan found ${open} update${open === 1 ? "" : "s"} — review`);
+    btn.onclick = () => toggleSugPanel();
+    head.appendChild(btn);
+  } else {
+    head.appendChild(el("span", "sub", "reply tracking: on"));
+    const p = document.getElementById("sugpanel");
+    if (p) p.hidden = true;
+  }
+  const last = ms.last;
+  bar.querySelector(".sug-foot").textContent =
+    last ? `last scan: ${(last.summary || "").split(" | ")[0]}` : "first scan pending";
+}
+
+async function toggleSugPanel() {
+  const panel = document.getElementById("sugpanel");
+  if (!panel) return;
+  if (!panel.hidden) { panel.hidden = true; return; }
+  panel.hidden = false;
+  panel.textContent = "loading…";
+  try {
+    const d = await (await fetch("/api/suggestions")).json();
+    renderSugPanel(panel, d.suggestions || []);
+  } catch {
+    panel.textContent = "couldn't load suggestions";
+  }
+}
+
+const KIND_LABEL = { set_applied: "mark applied", set_interviewing: "mark interviewing",
+                     set_offer: "mark offer", set_rejected: "mark rejected" };
+
+function renderSugPanel(panel, sugs) {
+  panel.textContent = "";
+  if (!sugs.length) { panel.hidden = true; return; }
+  for (const s of sugs) {
+    const row = el("div", "sug-row");
+    // all mail-derived strings via textContent — email content is untrusted
+    const what = el("span", "sug-what");
+    what.textContent = `${s.company} — ${s.role} · ${KIND_LABEL[s.kind] || s.kind}`;
+    const ev = el("span", "sub sug-ev");
+    ev.textContent = s.evidence || "";
+    const accept = el("button", "deck", "Accept");
+    accept.onclick = async () => {
+      try {
+        const d = await postJSON(`/api/suggestions/${s.id}/accept`, {});
+        patchRow(d.job.id, d.job);
+        render();
+        loadMeta();
+        row.remove();
+        showToast(`${s.company} → ${d.job.status}`, "ok");
+        if (!panel.querySelector(".sug-row")) panel.hidden = true;
+      } catch (e) { showToast(String(e.message || e).slice(0, 140), "err"); }
+    };
+    const dismiss = el("button", "deck", "Dismiss");
+    dismiss.onclick = async () => {
+      try {
+        await postJSON(`/api/suggestions/${s.id}/dismiss`, {});
+        loadMeta();
+        row.remove();
+        if (!panel.querySelector(".sug-row")) panel.hidden = true;
+      } catch (e) { showToast(String(e.message || e).slice(0, 140), "err"); }
+    };
+    row.append(what, ev, accept, dismiss);
+    panel.appendChild(row);
+  }
 }
 
 /* The public demo says so above the fold, once — loadMeta() runs on every
@@ -172,7 +329,7 @@ function demoBanner() {
   if (!(S.meta && S.meta.demo) || document.getElementById("demobanner")) return;
   const header = document.querySelector("header");
   if (!header) return;
-  for (const id of ["checkNow", "emailSaved"]) {
+  for (const id of ["checkNow", "emailSaved", "addForm", "update"]) {
     const el = $(id);
     if (el) el.style.display = "none";
   }
@@ -449,6 +606,22 @@ function roleCell(r) {
   return td;
 }
 
+function daysSince(iso) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (isNaN(d)) return null;
+  return Math.max(0, Math.floor((Date.now() - d.getTime()) / 86400000));
+}
+
+/* amber nudge: outreach sent, no newer reply, quiet for over a week */
+function awaitingReply(r) {
+  if (!r.last_out) return false;
+  if (r.status !== "applied" && r.status !== "interviewing") return false;
+  if (r.last_in && r.last_in >= r.last_out) return false;
+  const lo = daysSince(r.last_out);
+  return lo != null && lo > 7;
+}
+
 function ageCell(r) {
   const td = document.createElement("td");
   td.className = "age r";
@@ -460,6 +633,21 @@ function ageCell(r) {
     const f = document.createElement("span");
     f.className = "stale-flag"; f.textContent = " · stale";
     td.appendChild(f);
+  }
+  // last-touch sub-line: ↑ = you to them, ↓ = them to you (contact log + mail scan)
+  const lo = daysSince(r.last_out);
+  const li = daysSince(r.last_in);
+  if (lo != null || li != null) {
+    const t = document.createElement("div");
+    t.className = "sub touch";
+    t.textContent = `↑${lo == null ? "—" : lo + "d"} ↓${li == null ? "—" : li + "d"}`;
+    if (awaitingReply(r)) {
+      const dot = document.createElement("span");
+      dot.className = "awaitdot";
+      dot.title = `outreach ${lo}d unanswered`;
+      t.prepend(dot);
+    }
+    td.appendChild(t);
   }
   return td;
 }
@@ -806,9 +994,11 @@ async function openDetail(id) {
   syncHash();
   markOpenRow();
   try {
-    const r = await fetch(`/api/jobs/${id}`);
+    const [r, tl] = await Promise.all([fetch(`/api/jobs/${id}`),
+                                       fetch(`/api/jobs/${id}/timeline`)]);
     if (!r.ok) throw new Error(`${r.status}`);
     S.detailJob = await r.json();
+    S.detailTimeline = tl.ok ? (await tl.json()).events : [];
   } catch (e) {
     console.error("detail load failed", e);
     closeDetail();
@@ -907,7 +1097,84 @@ function renderDetail() {
       "pending enrichment — run full scan in Claude"));
   }
   card.appendChild(enr);
+  if (j.company_id != null) {
+    const dline = el("div", "d-card-sub");
+    const dbtn = el("button", "linklike", "set mail domain");
+    dbtn.title = "tell the reply scan which email domain is theirs";
+    dbtn.onclick = async () => {
+      const dom = prompt(`Mail domain for ${j.company} (e.g. ramp.com):`);
+      if (!dom) return;
+      try {
+        const d = await postJSON(`/api/companies/${j.company_id}/domain`,
+                                 { domain: dom.trim() });
+        showToast(`domain saved: ${d.domain}`, "ok");
+      } catch (e) { showToast(String(e.message || e).slice(0, 140), "err"); }
+    };
+    dline.appendChild(dbtn);
+    card.appendChild(dline);
+  }
   aside.appendChild(card);
+
+  // history: merged stage + contact timeline, newest first
+  const hist = el("div", "d-card");
+  hist.appendChild(el("div", "d-card-h", "History"));
+  const events = S.detailTimeline || [];
+  if (!events.length) hist.appendChild(el("div", "d-card-sub", "no history yet"));
+  for (const e of events.slice(0, 12)) {
+    const line = el("div", "d-tl");
+    const when = (e.occurred_at || "").slice(0, 10);
+    if (e.kind === "stage") {
+      line.appendChild(el("span", "sub", when + " · "));
+      line.appendChild(el("span", null, `→ ${e.to_status}`));
+      line.appendChild(el("span", "sub", ` (${e.source})`));
+      if (e.note) line.appendChild(el("span", "sub", ` — ${e.note}`));
+    } else {
+      const arrow = e.direction === "out" ? "↑" : "↓";
+      line.appendChild(el("span", "sub", when + " · "));
+      line.appendChild(el("span", null,
+        `${arrow} ${e.channel === "manual" ? "logged" : "email"}`));
+      if (e.subject) line.appendChild(el("span", "sub", ` — ${e.subject}`));
+      if (e.snippet && !e.subject) line.appendChild(el("span", "sub", ` — ${e.snippet}`));
+    }
+    hist.appendChild(line);
+  }
+  if (events.length > 12) {
+    hist.appendChild(el("div", "d-card-sub", `+ ${events.length - 12} older`));
+  }
+  const lc = el("button", "deck d-logcontact", "+ log contact");
+  lc.onclick = () => {
+    if (hist.querySelector(".d-contact-form")) return;
+    const form = el("div", "d-contact-form");
+    const dir = document.createElement("select");
+    for (const [v, l] of [["out", "I reached out"], ["in", "they replied"]]) {
+      const o = document.createElement("option");
+      o.value = v; o.textContent = l;
+      dir.appendChild(o);
+    }
+    const date = document.createElement("input");
+    date.type = "date";
+    const note = document.createElement("input");
+    note.placeholder = "note (optional)";
+    note.maxLength = 500;
+    const save = el("button", "deck", "Save");
+    save.onclick = async () => {
+      try {
+        await postJSON(`/api/jobs/${j.id}/contact`, {
+          direction: dir.value,
+          occurred_at: date.value ? date.value + "T12:00:00" : null,
+          note: note.value.trim(),
+        });
+        showToast("contact logged", "ok");
+        await openDetail(j.id);   // re-renders history
+        load();                   // refresh last-touch in the table
+      } catch (e) { showToast(String(e.message || e).slice(0, 140), "err"); }
+    };
+    form.append(dir, date, note, save);
+    hist.appendChild(form);
+    note.focus();
+  };
+  hist.appendChild(lc);
+  aside.appendChild(hist);
 
   // notes textarea (POST on blur only when dirty)
   const nWrap = el("div", "d-field");
@@ -1171,10 +1438,91 @@ function flashRow(key) {
   }
 }
 
+/* ---------------- paste-a-link (POST /api/add-url) ---------------- */
+function flashRowById(id) {
+  const tbody = $("grid").tBodies[0];
+  if (!tbody) return;
+  for (const tr of tbody.rows) {
+    if (Number(tr.dataset.id) === id) {
+      tr.scrollIntoView({ behavior: "smooth", block: "center" });
+      tr.classList.add("rowflash");
+      setTimeout(() => tr.classList.remove("rowflash"), 1200);
+      return;
+    }
+  }
+}
+
+function openManualPanel(msg) {
+  $("manualMsg").textContent = msg || "Fill in the details and I'll do the rest.";
+  $("manualPanel").hidden = false;
+  $("manualJd").focus();
+}
+
+function closeManualPanel() {
+  $("manualPanel").hidden = true;
+  for (const id of ["manualJd", "manualCompany", "manualRole", "manualLoc"]) $(id).value = "";
+}
+
+function manualAdd() {
+  const manual = {
+    company: $("manualCompany").value.trim(),
+    role: $("manualRole").value.trim(),
+    location: $("manualLoc").value.trim(),
+    jd_text: $("manualJd").value.trim(),
+  };
+  if (!manual.company || !manual.role) {
+    showToast("company and role are required", "err");
+    return;
+  }
+  addFromUrl(false, manual);
+}
+
+async function addFromUrl(force = false, manual = null) {
+  const input = $("addUrl");
+  const url = (input.value || "").trim();
+  if (!url) return;
+  const btn = $("addGo");
+  btn.disabled = true;
+  btn.textContent = "Adding…";
+  try {
+    const d = await postJSON("/api/add-url", { url, force, manual });
+    if (d.outcome === "linkedin_paste") {
+      openManualPanel(d.message);       // the red line: the app never fetches LinkedIn
+    } else if (d.outcome === "needs_confirm") {
+      const ok = confirm("This posting fails your gates:\n\n- "
+        + d.warnings.join("\n- ") + "\n\nAdd it anyway?");
+      if (ok) return addFromUrl(true, manual);
+      showToast("not added", "warn");
+    } else if (d.outcome === "dup") {
+      input.value = "";
+      closeManualPanel();
+      showToast("already tracked — bumped", "warn");
+      await load();
+      loadMeta();
+      flashRowById(d.id);
+    } else {
+      let msg = `added · ${d.priority}`;
+      if (d.warnings && d.warnings.length) msg += " — flagged: " + d.warnings[0];
+      input.value = "";
+      closeManualPanel();
+      await load();
+      loadMeta();
+      if (statusInView("new")) flashRowById(d.id);
+      else msg += " — in the New view";
+      showToast(msg, "ok");
+    }
+  } catch (e) {
+    showToast(String(e && e.message ? e.message : e).slice(0, 140), "err");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Add";
+  }
+}
+
 /* ---------------- CSV export (current filtered+sorted view) ---------------- */
 const CSV_COLS = ["company", "role", "url", "priority", "status", "family", "term", "salary_text",
   "stage", "headcount", "work_mode", "score", "posted_date", "discovered_date",
-  "applied_date", "source", "notes"];
+  "applied_date", "last_out", "last_in", "source", "notes"];
 
 function csvCell(v) {
   const s = v == null ? "" : String(v);
@@ -1286,6 +1634,30 @@ function pollPull() {
   }, 2000);
 }
 
+/* ---------------- in-app Update (git pull + uv sync) ---------------- */
+async function runUpdate() {
+  const btn = $("update");
+  btn.disabled = true;
+  btn.textContent = "Updating…";
+  try {
+    const d = await postJSON("/api/update", {});
+    if (!d.updated) {
+      showToast("already up to date", "ok");
+    } else if (!document.getElementById("updbanner")) {
+      const b = document.createElement("div");
+      b.id = "updbanner";
+      b.textContent = `Updated to ${d.head} — restart to apply: Ctrl+C in the ` +
+        "terminal, then  uv run intern-inbox --open";
+      document.querySelector("header").after(b);
+    }
+  } catch (e) {
+    showToast(String(e && e.message ? e.message : e).slice(0, 140), "err");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Update";
+  }
+}
+
 /* ---------------- toast ---------------- */
 function showToast(msg, kind) {
   const t = $("toast");
@@ -1361,6 +1733,14 @@ function wire() {
   $("checkNow").addEventListener("click", checkNow);
   $("csv").addEventListener("click", exportCsv);
   $("emailSaved").addEventListener("click", emailSaved);
+
+  // paste-a-link
+  $("addForm").addEventListener("submit", (e) => { e.preventDefault(); addFromUrl(); });
+  $("manualAdd").addEventListener("click", manualAdd);
+  $("manualCancel").addEventListener("click", closeManualPanel);
+
+  // in-app update
+  $("update").addEventListener("click", runUpdate);
 
   // bulk bar
   $("bulkShortlist").addEventListener("click", () => runBulk("shortlist"));

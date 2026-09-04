@@ -84,14 +84,25 @@ body.ats-page #viewSeg { display: none; }
 .seg button.on { color: var(--ink); background: var(--surface); }
 
 /* search + selects share one control surface */
-input[type="search"], select { background: var(--surface);
+input[type="search"], input[type="url"], #manualPanel input, #manualPanel textarea,
+select { background: var(--surface);
   border: 1px solid var(--line); border-radius: var(--radius);
   color: var(--text); font-size: 13px; padding: 6px 10px;
   transition: border-color 0.15s ease-out; }
 input[type="search"] { min-width: 220px; flex: 0 1 300px; }
-input[type="search"]::placeholder { color: var(--muted); }
-input[type="search"]:focus-visible, select:focus-visible {
+input[type="search"]::placeholder, input[type="url"]::placeholder,
+#manualPanel ::placeholder { color: var(--muted); }
+input[type="search"]:focus-visible, input[type="url"]:focus-visible,
+#manualPanel :focus-visible, select:focus-visible {
   outline: none; border-color: var(--line-strong); }
+#addForm { display: inline-flex; gap: 8px; }
+#addUrl { min-width: 180px; flex: 0 1 240px; }
+#manualPanel { display: flex; flex-direction: column; gap: 8px;
+  padding: 10px 16px; border-bottom: 1px solid var(--line); }
+#manualPanel[hidden] { display: none; }
+#manualPanel textarea { min-height: 90px; resize: vertical; font: inherit; }
+.manualrow { display: flex; gap: 8px; flex-wrap: wrap; }
+.manualrow input { flex: 1 1 160px; }
 select { cursor: pointer; }
 
 /* deck buttons (Check now / CSV / Email) */
@@ -419,6 +430,46 @@ body.wizard-body { padding: 0 22px 72px; }
 #wizbanner a, #demobanner a { color: var(--warn); text-decoration: underline;
                text-underline-offset: 3px; }
 #wizbanner a:hover, #demobanner a:hover { color: var(--ink); }
+
+#updbanner { padding: 9px 28px; font-size: 12.5px;
+  background: rgba(127, 196, 132, 0.07);
+  border-bottom: 1px solid rgba(127, 196, 132, 0.35);
+  font-family: inherit; }
+
+/* reply-scan consent banner + review strip (quiet ledger: color is state) */
+#mailbanner { padding: 9px 28px; font-size: 12.5px;
+  background: rgba(127, 196, 132, 0.06);
+  border-bottom: 1px solid rgba(127, 196, 132, 0.3);
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+#mailwhat { flex-basis: 100%; color: var(--text); max-width: 72ch;
+  padding: 6px 0 2px; line-height: 1.5; }
+#sugbar { padding: 7px 28px; font-size: 12.5px; border-bottom: 1px solid var(--line);
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+button.linklike { background: none; border: none; padding: 0; cursor: pointer;
+  color: var(--ok); font-size: 12.5px; text-decoration: underline;
+  text-underline-offset: 3px; }
+button.linklike:hover { color: var(--ink); }
+#sugbar .sug-foot { margin-left: auto; }
+#sugpanel { flex-basis: 100%; display: flex; flex-direction: column; gap: 6px;
+  padding: 8px 0 4px; }
+#sugpanel[hidden] { display: none; }
+.sug-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.sug-ev { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; max-width: 46ch; }
+
+/* last-touch sub-line + awaiting-reply nudge in the Age cell */
+.age .touch { white-space: nowrap; }
+.awaitdot { display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--warn); margin-right: 5px; vertical-align: 0.5px; }
+
+/* detail-panel history + contact form */
+.d-tl { font-size: 12.5px; line-height: 1.6; }
+.d-logcontact { margin-top: 8px; }
+.d-contact-form { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.d-contact-form select, .d-contact-form input { background: var(--surface);
+  border: 1px solid var(--line); border-radius: var(--radius);
+  color: var(--text); font-size: 12.5px; padding: 4px 8px; }
+.d-contact-form input[type="date"] { color-scheme: dark; }
 /* icon-only deck button: square padding, and quieter than the worded ones */
 #prefs { padding: 5px 9px; font-size: 14px; line-height: 1.15; color: var(--muted); }
 #prefs:hover { color: var(--ink); }

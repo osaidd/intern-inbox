@@ -50,6 +50,16 @@ urls = [
 sender = "jobs-noreply@linkedin.com"
 lookback_days = 14
 
+[mail_scan]
+# Reply & outreach tracking (feeds/mail_scan.py). This section is OPTIONAL —
+# omit it entirely and these defaults apply. The scan additionally requires the
+# explicit in-app opt-in (data/mail_scan_enabled marker, via the wizard checkbox
+# or the app banner); `enabled = false` here is the hard off that wins over it.
+enabled = true
+# How far back the daily scan searches (INBOX from job/tracked senders, Sent to
+# tracked-company domains — see README Privacy for the exact contract).
+lookback_days = 30
+
 [mail_sources]
 # Extra job-alert senders parsed by the mail feed in the SAME IMAP session as the
 # LinkedIn alerts above. Flip a flag to false to stop parsing that sender without

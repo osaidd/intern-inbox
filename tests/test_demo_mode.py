@@ -58,13 +58,17 @@ def live(tmp_path, monkeypatch):
     yield client
 
 
-# ---------------- demo on: the four owner-only writes are shut ----------------
+# ---------------- demo on: the owner-only writes are shut ----------------
 
 @pytest.mark.parametrize("path, payload", [
     ("/api/email-saved", {}),
     ("/api/pull", {}),
     ("/api/wizard/complete", WIZARD_BODY),
     ("/api/add", [{"company": "Anon", "role": "Intern"}]),
+    ("/api/add-url", {"url": "https://x.co/j/1"}),
+    ("/api/mail-scan/enable", {}),
+    ("/api/mail-scan/disable", {}),
+    ("/api/update", {}),
 ])
 def test_owner_writes_are_403_in_demo(demo, path, payload):
     r = demo.post(path, json=payload)

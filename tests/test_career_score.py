@@ -130,6 +130,38 @@ def test_exclude_companies_word_boundary():
     assert matches(_job(company="Jane Street Capital"), CFG) is False
 
 
+# ---- gate_warnings ----------------------------------------------------------
+def test_gate_warnings_empty_iff_matches():
+    """gate_warnings is the single source of truth: [] exactly when matches() passes."""
+    from career_hunt.score import gate_warnings
+    cases = [_job(), _job(location="Remote"), _job(location="San Francisco, CA"),
+             _job(location=None), _job(role="Senior AI Engineer"),
+             _job(company="Google"), _job(jd_text="We are a Fortune 500 leader"),
+             _job(role="AI Engineer", jd_text="Own our LLM stack."),
+             _job(role="Software Engineer", employment_type="Intern")]
+    for j in cases:
+        assert (gate_warnings(j, CFG) == []) == matches(j, CFG), j
+
+
+def test_gate_warning_messages():
+    from career_hunt.score import gate_warnings
+    assert gate_warnings(_job(), CFG) == []
+    assert gate_warnings(_job(location=None), CFG) == \
+        ["no location found on the page — can't confirm NYC/NJ"]
+    assert gate_warnings(_job(location="San Francisco, CA"), CFG) == \
+        ["'San Francisco, CA' is outside the NYC/NJ metro"]
+    assert gate_warnings(_job(role="Senior AI Intern"), CFG) == \
+        ["title matches exclude keyword 'senior'"]
+    assert gate_warnings(_job(role="AI Engineer", jd_text="Own our LLM stack."), CFG) == \
+        ["not an internship — this pipeline is internships only"]
+    assert gate_warnings(_job(company="Google"), CFG) == \
+        ["company is on your blocklist or the JD has size red flags"]
+    # a remote row fails both the remote gate and the metro gate — both named
+    w = gate_warnings(_job(location="Remote"), CFG)
+    assert "remote role and allow_remote is off" in w
+    assert any("outside the NYC/NJ metro" in m for m in w)
+
+
 # ---- allow_late_stages config gate ------------------------------------------
 def test_late_stage_dead_by_default():
     assert company_tier("series c", 40, CFG) == "dead"

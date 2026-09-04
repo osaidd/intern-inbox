@@ -91,6 +91,50 @@ def test_parse_greenhouse_filters_and_maps():
     assert j4.posted_date == "2026-07-25"
 
 
+def test_find_ashby_by_url():
+    """Pasted-URL lookup: NO gates — the user pasted it, so remote/unlisted/
+    non-intern entries come back too (gate_warnings handles the rest downstream)."""
+    from career_hunt.sources.ats import find_ashby
+    j = find_ashby(ASHBY, "solva", "https://jobs.ashbyhq.com/solva/aaaa-1111")
+    assert j.role == "AI Engineering Intern" and j.location == "New York, NY (HQ)"
+    assert j.salary_text == "$25 - $35 per hour" and j.employment_type == "Intern"
+    assert j.company == "Solva" and j.posted_date == "2026-07-20"
+    # query junk + trailing slash + case still hit
+    j = find_ashby(ASHBY, "solva", "HTTPS://jobs.ashbyhq.com/solva/aaaa-1111/?utm_source=x")
+    assert j and j.role == "AI Engineering Intern"
+    # the /application variant matches via the posting-UUID path segment
+    j = find_ashby(ASHBY, "solva", "https://jobs.ashbyhq.com/solva/aaaa-1111/application")
+    assert j and j.role == "AI Engineering Intern"
+    # SF-primary posting with a NYC secondary: the metro candidate wins
+    assert find_ashby(ASHBY, "solva",
+                      "https://jobs.ashbyhq.com/solva/bbbb-2222").location == "New York, NY"
+    # remote-only row still returned, primary location string kept
+    j = find_ashby(ASHBY, "solva", "https://jobs.ashbyhq.com/solva/cccc-3333")
+    assert j.role == "Machine Learning Engineer" and j.location == "Remote (US)"
+    # unlisted draft still returned — the paste IS the signal
+    assert find_ashby(ASHBY, "solva",
+                      "https://jobs.ashbyhq.com/solva/dddd-4444").role == "AI Engineer"
+    assert find_ashby(ASHBY, "solva", "https://jobs.ashbyhq.com/solva/zzzz-0000") is None
+
+
+def test_find_greenhouse_by_url():
+    from career_hunt.sources.ats import find_greenhouse
+    j = find_greenhouse(GREENHOUSE, "tessera",
+                        "https://job-boards.greenhouse.io/tessera/jobs/100")
+    assert j.role == "Forward Deployed Engineer Intern" and j.company == "Tessera"
+    assert "LLM agents for fintech operations" in j.jd_text and "&lt;" not in j.jd_text
+    assert j.posted_date == "2026-07-18"
+    # numeric-id match when the host/path differ (boards.greenhouse.io mirror + query)
+    j = find_greenhouse(GREENHOUSE, "tessera",
+                        "https://boards.greenhouse.io/tessera/jobs/200?gh_src=abc")
+    assert j and j.role == "AI Engineer" and j.location == "London, United Kingdom"
+    j = find_greenhouse(GREENHOUSE, "tessera",
+                        "HTTPS://job-boards.greenhouse.io/tessera/jobs/400/")
+    assert j and j.role == "GTM Engineering Intern" and j.company == "Tessera"
+    assert find_greenhouse(GREENHOUSE, "tessera",
+                           "https://job-boards.greenhouse.io/tessera/jobs/999") is None
+
+
 def _opener_for(bodies):
     """Fake urlopen: url → JSON body, or raises when body is an Exception."""
     def opener(req, timeout=None):

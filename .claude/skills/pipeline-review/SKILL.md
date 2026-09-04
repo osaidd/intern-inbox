@@ -41,8 +41,11 @@ Presentation-only: it shows stored numbers. No AI re-scoring here — judgment l
    you:
    ```python
    from career_inbox.actions import set_status
-   for i in ids: set_status(i, 'dead')   # kill
+   for i in ids: set_status(i, 'dead', source='skill')   # kill
    ```
+   Always pass `source='skill'` — set_status appends the row's `stage_events`
+   history entry, and a hand-rolled UPDATE (or the default 'ui' source) would
+   silently corrupt the timeline the app shows.
    - `kill` → `'dead'` · `shortlist` → `'shortlisted'` · `revive` → `'new'`
    - `applied` → `'applied'` (stamps `applied_date` on the first transition)
    - `interviewing` → `'interviewing'` · `offer` → `'offer'`
