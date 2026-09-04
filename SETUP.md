@@ -363,6 +363,16 @@ Gmail is the default, but nothing requires it — pick your provider in wizard
 step 3. A school Outlook account is a nice fit: your personal mailbox never
 enters the picture.
 
+**Locked-down school tenant? Skip Outlook — forward instead.** Some
+universities (NUS included) block the Azure portal and third-party app
+sign-ins for student accounts, which walls off every OAuth path. The zero-Azure
+answer: auto-forward your school inbox to a Gmail (school Outlook web →
+Settings → Mail → Forwarding), point the tracker at that Gmail, and subscribe
+to job alerts with the Gmail address in the first place. Replies that companies
+send to your school address arrive through the forward, so reply tracking keeps
+working — and your personal mail can stay in a Gmail you created just for the
+hunt if you want the same separation.
+
 **Outlook (personal or school/M365).** Microsoft retired password IMAP in
 2024, so Outlook connects with a short Microsoft sign-in instead of an app
 password: press **Connect Microsoft account** in the wizard (or run
